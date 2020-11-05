@@ -4,9 +4,10 @@
 Function responsible for allocating and setting your physical memory
 */
 void SetPhysicalMem() {
-
+    printf("Setting physical mem\n");
     //Allocate physical memory using mmap or malloc; this is the total size of
     //your memory you are simulating
+
 
 
     //HINT: Also calculate the number of physical and virtual pages and allocate
