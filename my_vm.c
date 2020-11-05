@@ -9,7 +9,6 @@ unsigned int numVirtPages = 0; // stores total number of virtual pages
 unsigned int numPhysPages = 0; // stores total number of physical pages
 
 int initialized = 0; // stores value to help determine if physical memory has been initialized yet
-
 /*
 Function responsible for allocating and setting your physical memory
 */
