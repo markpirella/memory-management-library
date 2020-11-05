@@ -1,6 +1,14 @@
 #include "my_vm.h"
 
-int bitmap[]; // int array to simulate bitmap
+int *virtBitmap; // pointer to int array that simulates bitmap for virtual pages
+int *physBitmap; // pointer to int array that simulates bitmap for physical pages
+
+void *physMem = NULL; // void pointer to point to the start of allocated physical memory
+
+unsigned int numVirtPages = 0; // stores total number of virtual pages
+unsigned int numPhysPages = 0; // stores total number of physical pages
+
+int initialized = 0; // stores value to help determine if physical memory has been initialized yet
 
 /*
 Function responsible for allocating and setting your physical memory
@@ -13,6 +21,30 @@ void SetPhysicalMem() {
 
     //HINT: Also calculate the number of physical and virtual pages and allocate
     //virtual and physical bitmaps and initialize them
+
+    // allocate physical memory and set the void pointer physMem to the start of the physical memory
+    physMem = malloc(MEMSIZE);
+
+    // store appropriate number of virtual pages
+    numVirtPages = MAX_MEMSIZE / PGSIZE;
+
+    // store appropriate number of physical pages
+    numPhysPages = MEMSIZE / PGSIZE;
+
+    // allocate and initialize virtual bitmap
+    int temp[numVirtPages];
+    virtBitmap = temp;
+    int i;
+    for(i = 0; i < numVirtPages; i++){
+        ClearBit(virtBitmap, i);
+    }
+
+    // allocate and initialize physical bitmap
+    int temp2[numPhysPages];
+    physBitmap = temp2;
+    for(i = 0; i < numPhysPages; i++){
+        ClearBit(physBitmap, i);
+    }
 
 }
 
@@ -130,12 +162,20 @@ void *myalloc(unsigned int num_bytes) {
 
     //HINT: If the physical memory is not yet initialized, then allocate and initialize.
 
-   /* HINT: If the page directory is not initialized, then initialize the
-   page directory. Next, using get_next_avail(), check if there are free pages. If
-   free pages are available, set the bitmaps and map a new page. Note, you will
-   have to mark which physical pages are used. */
+    /* HINT: If the page directory is not initialized, then initialize the
+    page directory. Next, using get_next_avail(), check if there are free pages. If
+    free pages are available, set the bitmaps and map a new page. Note, you will
+    have to mark which physical pages are used. */
+
+
+    // initialize physical memory using SetPhysicalMem() if this is first user call to myalloc()
+    if(initialized == 0){
+        SetPhysicalMem();
+        initialized = 1;
+    }
 
     return NULL;
+
 }
 
 /* Responsible for releasing one or more memory pages using virtual address (va)
