@@ -46,4 +46,14 @@ void GetVal(void *va, void *val, int size);
 void MatMult(void *mat1, void *mat2, int size, void *answer);
 void print_TLB_missrate();
 
+/*
+Our functions
+*/
+void SetBit(int A[], int k);
+void ClearBit(int A[], int k);
+int TestBit(int A[],  int k);
+/*
+End our functions
+*/
+
 #endif

@@ -1,5 +1,7 @@
 #include "my_vm.h"
 
+int bitmap[]; // int array to simulate bitmap
+
 /*
 Function responsible for allocating and setting your physical memory
 */
@@ -95,9 +97,29 @@ PageMap(pde_t *pgdir, void *va, void *pa)
 
 /*Function that gets the next available page
 */
+/*
 void *get_next_avail(int num_pages) {
 
     //Use virtual address bitmap to find the next free page
+}
+
+**** FUNCTION ABOVE SPLIT INTO THE TWO FUNCTIONS BELOW, AS SUGGESTED ****
+*/
+
+/*
+Function that gets the next available virtual page
+*/
+void *get_next_avail_virt(int num_pages) {
+
+    //Use virtual address bitmap to find the next free *virtual* page
+}
+
+/*
+Function that gets the next available physical page
+*/
+void *get_next_avail_phys(int num_pages) {
+
+    //Use virtual address bitmap to find the next free *physical* page
 }
 
 
@@ -167,3 +189,21 @@ void MatMult(void *mat1, void *mat2, int size, void *answer) {
 
 
 }
+
+/*
+Bitmap functions below
+*/
+void SetBit(int A[], int k){
+    A[k/32] |= 1 << (k%32);  // set the bit at the k-th position in A[i]
+}
+
+void ClearBit(int A[], int k){
+    A[k/32] &= ~(1 << (k%32)); // clear the bit at the k-th position in A[i]
+}
+
+int TestBit(int A[],  int k){
+    return ( (A[k/32] & (1 << (k%32) )) != 0); // return value of bit at the k-th position in A[i]
+}
+/*
+End bitmap functions
+*/
