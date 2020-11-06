@@ -18,11 +18,8 @@ int main(){
 Function responsible for allocating and setting your physical memory
 */
 void SetPhysicalMem() {
-
     //Allocate physical memory using mmap or malloc; this is the total size of
     //your memory you are simulating
-
-
     //HINT: Also calculate the number of physical and virtual pages and allocate
     //virtual and physical bitmaps and initialize them
 
