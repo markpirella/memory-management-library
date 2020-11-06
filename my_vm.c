@@ -1,14 +1,18 @@
 #include "my_vm.h"
 
-int *virtBitmap; // pointer to int array that simulates bitmap for virtual pages
-int *physBitmap; // pointer to int array that simulates bitmap for physical pages
+bitmap_t pdeBitmap;    // Bitmap with bits set to retrieve page directory
+bitmap_t pteBitmap;    // Bitmap with bits set to retrieve page table from directory
+bitmap_t offsetBitmap; // Bitmap with bits set to retrieve page offset
 
 void *physMem = NULL; // void pointer to point to the start of allocated physical memory
 
-unsigned int numVirtPages = 0; // stores total number of virtual pages
-unsigned int numPhysPages = 0; // stores total number of physical pages
+size_t numVirtPages = 0; // stores total number of virtual pages
+size_t numPhysPages = 0; // stores total number of physical pages
 
 int initialized = 0; // stores value to help determine if physical memory has been initialized yet
+
+pde_t *PageDirectories;
+
 /*
 Function responsible for allocating and setting your physical memory
 */
@@ -20,30 +24,22 @@ void SetPhysicalMem() {
 
     // allocate physical memory and set the void pointer physMem to the start of the physical memory
     physMem = malloc(MEMSIZE);
-
     // store appropriate number of virtual pages
     numVirtPages = MAX_MEMSIZE / PGSIZE;
 
     // store appropriate number of physical pages
     numPhysPages = MEMSIZE / PGSIZE;
 
-    // allocate and initialize virtual bitmap
-    int temp[numVirtPages];
-    virtBitmap = temp;
-    int i;
-    for(i = 0; i < numVirtPages; i++){
-        ClearBit(virtBitmap, i);
-    }
+    // gets number of bits we need for corresponding values
 
-    // allocate and initialize physical bitmap
-    int temp2[numPhysPages];
-    physBitmap = temp2;
-    for(i = 0; i < numPhysPages; i++){
-        ClearBit(physBitmap, i);
-    }
+    // Init bitmaps to 0
 
+
+    
+
+    // set initialized flag to 1
+    initialized = 1;
 }
-
 
 /*
  * Part 2: Add a virtual to physical page translation to the TLB.
@@ -229,16 +225,27 @@ void MatMult(void *mat1, void *mat2, int size, void *answer) {
 /*
 Bitmap functions below
 */
-void SetBit(int A[], int k){
-    A[k/32] |= 1 << (k%32);  // set the bit at the k-th position in A[i]
+
+// Sets bit range [a, b) to 1
+void SetBitRange(bitmap_t A, int a, int b){
+    int i;
+    for(i = a; i < b; i++)
+        SetBit(A, i);
 }
 
-void ClearBit(int A[], int k){
-    A[k/32] &= ~(1 << (k%32)); // clear the bit at the k-th position in A[i]
+// Sets bit k to 1
+void SetBit(bitmap_t A, int k){
+    A |= 1 << (k % ADDRESS_BIT_LENGTH);  // set the bit at the k-th position in A[i]
 }
 
-int TestBit(int A[],  int k){
-    return ( (A[k/32] & (1 << (k%32) )) != 0); // return value of bit at the k-th position in A[i]
+// Sets bit k to 0
+void ClearBit(bitmap_t A, int k){
+    A &= ~(1 << (k % ADDRESS_BIT_LENGTH)); // clear the bit at the k-th position in A[i]
+}
+
+// Gets the value of bit k
+int TestBit(bitmap_t A,  int k){
+    return ( (A & (1 << (k % ADDRESS_BIT_LENGTH) )) != 0); // return value of bit at the k-th position in A[i]
 }
 /*
 End bitmap functions

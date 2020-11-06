@@ -3,24 +3,34 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <math.h>
 
 //Assume the address space is 32 bits, so the max memory size is 4GB
 //Page size is 4KB
 
 //Add any important includes here which you may need
 
-#define PGSIZE 4096
+#define PGSIZE 4096 // 2^12
 
 // Maximum size of your memory
 #define MAX_MEMSIZE 4ULL*1024*1024*1024 //4GB
 
 #define MEMSIZE 1024*1024*1024
 
+#define ADDRESS_BIT_LENGTH 32
+
+#define PAGE_TABLE_BIT_LENGTH 10
+// Type for bitmap
+typedef unsigned long long bitmap_t;
+
 // Represents a page table entry
 typedef unsigned long pte_t;
 
 // Represents a page directory entry
 typedef unsigned long pde_t;
+
+
 
 #define TLB_SIZE 120
 
@@ -49,9 +59,13 @@ void print_TLB_missrate();
 /*
 Our functions
 */
-void SetBit(int A[], int k);
-void ClearBit(int A[], int k);
-int TestBit(int A[],  int k);
+
+
+void SetBitRange(bitmap_t A, int a, int b);
+void SetBit  (bitmap_t A, int k);
+void ClearBit(bitmap_t A, int k);
+int  TestBit (bitmap_t A, int k);
+
 /*
 End our functions
 */
