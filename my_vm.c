@@ -10,6 +10,10 @@ unsigned int numPhysPages = 0; // stores total number of physical pages
 
 int initialized = 0; // stores value to help determine if physical memory has been initialized yet
 
+int main(){
+    SetPhysicalMem();
+}
+
 /*
 Function responsible for allocating and setting your physical memory
 */
@@ -31,20 +35,40 @@ void SetPhysicalMem() {
     // store appropriate number of physical pages
     numPhysPages = MEMSIZE / PGSIZE;
 
+    // determine number of elements needed in virtual bitmap (bit array)
+    int bitmapLength = numVirtPages / 32;
+    if(numVirtPages % 32 != 0){
+        bitmapLength++;
+    }
+
     // allocate and initialize virtual bitmap
-    int temp[numVirtPages];
+    int temp[bitmapLength];
     virtBitmap = temp;
     int i;
-    for(i = 0; i < numVirtPages; i++){
-        ClearBit(virtBitmap, i);
+    for(i = 0; i < bitmapLength; i++){
+        virtBitmap[i] = 0;
+    }
+
+    // determine number of elements needed in physical bitmap (bit array)
+    bitmapLength = numPhysPages / 32;
+    if(numPhysPages % 32 != 0){
+        bitmapLength++;
     }
 
     // allocate and initialize physical bitmap
-    int temp2[numPhysPages];
+    int temp2[bitmapLength];
     physBitmap = temp2;
-    for(i = 0; i < numPhysPages; i++){
-        ClearBit(physBitmap, i);
+    for(i = 0; i < bitmapLength; i++){
+        physBitmap[i] = 0;
     }
+
+    SetBit(physBitmap+1, 0);
+    SetBit(physBitmap+1, 1);
+    SetBit(physBitmap+1, 2);
+    SetBit(physBitmap+1, 3);
+
+    printf("physical bitarray length (should be 262144): %d\n", bitmapLength);
+    printf("first elements in physBitmap: %x\n", physBitmap[1]);
 
 }
 
