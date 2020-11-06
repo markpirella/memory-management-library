@@ -1,55 +1,17 @@
+// Makefile
+// ${workspaceRoot} the path of the folder opened in VS Code
+// ${file} the current opened file
+// ${fileBasename} the current opened file's basename
+// ${fileDirname} the current opened file's dirname
+// ${fileExtname} the current opened file's extension
+// ${cwd} the task runner's current working directory on startup
 {
+    "version": "2.0.0",
     "tasks": [
         {
-            "type": "cppbuild",
-            "label": "GCC Build my_library",
-            "command": "/usr/bin/gcc",
-            "args": [
-                "-g",
-                "-c",
-                "-m32",
-                "my_vm.c"
-            ],
-            "problemMatcher": [
-                "$gcc"
-            ]
-        },
-        {
-            "label": "Add Objects to library",
-            "command": "ar",
-            "args": [
-                "-rc",
-                "libmy_vm.a",
-                "my_vm.o"
-            ]
-        },
-        {
-            "type": "cppbuild",
-            "label": "GCC Current executable",
-            "command": "/usr/bin/gcc",
-            "args": [
-                "-g",
-                "${file}",
-                "-o",
-                "${fileDirname}/${fileBasenameNoExtension}",
-                "-lmy_vm"
-            ],
-            "problemMatcher": [
-                "$gcc"
-            ]
-        },
-        {
-            "label": "make",
             "type": "shell",
-            "command": "echo something",
-            "args": [
-                "test.txt"
-            ]
-        },
-        {
-            "label": "C/C++: gcc build active file",
-            "dependsOn": "make"
+            "label": "make",
+            "command": "make clean;make"
         }
-    ],
-    "version": "2.0.0"
+    ]
 }
