@@ -64,7 +64,7 @@ void SetPhysicalMem() {
     SetBit(physBitmap+1, 2);
     SetBit(physBitmap+1, 3);
 
-    printf("physical bitarray length (should be 262144): %d\n", bitmapLength);
+    printf("physical bitarray length (should be 8192): %d\n", bitmapLength);
     printf("first elements in physBitmap: %x\n", physBitmap[1]);
 
 }
