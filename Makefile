@@ -19,5 +19,3 @@ test:
 clean:
 	rm -rf *.o *.a
 	rm -f test
-
-cleanall: clean all
