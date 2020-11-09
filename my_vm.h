@@ -3,10 +3,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
-<<<<<<< HEAD
 #include <string.h>
-=======
->>>>>>> b305a6bb83e35b9bacf41922064619c57e399e1c
 #include <math.h>
 
 //Assume the address space is 32 bits, so the max memory size is 4GB
@@ -20,12 +17,6 @@
 #define MAX_MEMSIZE 4ULL*1024*1024*1024 //4GB
 
 #define MEMSIZE 1024*1024*1024
-
-#define ADDRESS_BIT_LENGTH 32
-
-#define PAGE_TABLE_BIT_LENGTH 10
-// Type for bitmap
-typedef unsigned long long bitmap_t;
 
 // Represents a page table entry
 typedef unsigned long pte_t;
@@ -62,19 +53,12 @@ void print_TLB_missrate();
 /*
 Our functions
 */
-<<<<<<< HEAD
 
+void SetBitRange(int[] A, int a, int b);
+void SetBit(int[] A, int k);
+void ClearBit(int[] A, int k);
+int TestBit(int[] A, int k);
 
-void SetBitRange(bitmap_t A, int a, int b);
-void SetBit  (bitmap_t A, int k);
-void ClearBit(bitmap_t A, int k);
-int  TestBit (bitmap_t A, int k);
-
-=======
-void SetBit(int A[], int k); // set the bit at the k-th position in A[i]
-void ClearBit(int A[], int k); // clear the bit at the k-th position in A[i]
-int TestBit(int A[],  int k); // return value of bit at the k-th position in A[i]
->>>>>>> b305a6bb83e35b9bacf41922064619c57e399e1c
 /*
 End our functions
 */

@@ -1,8 +1,5 @@
 #include "my_vm.h"
-
-bitmap_t pdeBitmap;    // Bitmap with bits set to retrieve page directory
-bitmap_t pteBitmap;    // Bitmap with bits set to retrieve page table from directory
-bitmap_t offsetBitmap; // Bitmap with bits set to retrieve page offset
+#include <math.h>
 
 int *physBitmap;
 int *virtBitmap;
@@ -20,9 +17,6 @@ int numInnerIndexBits = 0; // stores the number of bits used to calculate the in
 int numPageDirEntries = 0; // stores the number of page dir entries for easy traversal through array
 
 int initialized = 0; // stores value to help determine if physical memory has been initialized yet
-
-pde_t *PageDirectories;
-
 
 /*
 Function responsible for allocating and setting your physical memory
