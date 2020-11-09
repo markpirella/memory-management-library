@@ -17,9 +17,6 @@ int numPageDirEntries = 0; // stores the number of page dir entries for easy tra
 
 int initialized = 0; // stores value to help determine if physical memory has been initialized yet
 
-pde_t *PageDirectories;
-
-
 /*
 Function responsible for allocating and setting your physical memory
 */
@@ -47,6 +44,7 @@ void SetPhysicalMem() {
     numInnerIndexBits = 32 - (numOffsetBits + numOuterIndexBits);
 
     // store number of page dir entries based on number of outer index bits
+    //! NUMBSKULL
     numPageDirEntries = 2^numOuterIndexBits;
 
     // determine number of elements needed in virtual bitmap (bit array)
@@ -186,6 +184,7 @@ pte_t * Translate(pde_t *pgdir, void *va) {
     
     int pdir_index = ((int)va & pDirMask) >> (numOffsetBits + numInnerIndexBits); // grab outer index bits in address using pDirMask and store as index of pde
     int ptable_index = ((int)va & pTableMask) >> numOffsetBits; // grab inner index bits in address using pTableMask and store as index of pte
+    //! WTF 
     int offset = (int)va & (int)((2^numOffsetBits) - 1); // grab offset bits and store in offset variable
 
     // *** now, get and return physical address from pagedir[pdir_index] ---> pagetable[ptable_index] ---> offset
@@ -204,7 +203,6 @@ virtual address is not present, then a new entry will be added
 int
 PageMap(pde_t *pgdir, void *va, void *pa)
 {
-
     /*HINT: Similar to Translate(), find the page directory (1st level)
     and page table (2nd-level) indices. If no mapping exists, set the
     virtual to physical mapping */
