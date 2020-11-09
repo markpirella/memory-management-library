@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 
 //Assume the address space is 32 bits, so the max memory size is 4GB
 //Page size is 4KB
@@ -49,9 +50,9 @@ void print_TLB_missrate();
 /*
 Our functions
 */
-void SetBit(int A[], int k);
-void ClearBit(int A[], int k);
-int TestBit(int A[],  int k);
+void SetBit(int A[], int k); // set the bit at the k-th position in A[i]
+void ClearBit(int A[], int k); // clear the bit at the k-th position in A[i]
+int TestBit(int A[],  int k); // return value of bit at the k-th position in A[i]
 /*
 End our functions
 */
