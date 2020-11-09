@@ -1,9 +1,5 @@
 #include "my_vm.h"
 
-bitmap_t pdeBitmap;    // Bitmap with bits set to retrieve page directory
-bitmap_t pteBitmap;    // Bitmap with bits set to retrieve page table from directory
-bitmap_t offsetBitmap; // Bitmap with bits set to retrieve page offset
-
 int *physBitmap;
 int *virtBitmap;
 
