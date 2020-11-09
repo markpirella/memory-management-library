@@ -12,6 +12,11 @@
             "type": "shell",
             "label": "make",
             "command": "make clean;make"
+        },
+        {
+            "type": "shell",
+            "label": "makesomething",
+            "command": "make clean;make something"
         }
     ]
 }

@@ -17,6 +17,10 @@ int numPageDirEntries = 0; // stores the number of page dir entries for easy tra
 
 int initialized = 0; // stores value to help determine if physical memory has been initialized yet
 
+int main()
+{
+    printf("HELLO WORLD!\n");
+}
 /*
 Function responsible for allocating and setting your physical memory
 */
