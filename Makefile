@@ -22,4 +22,4 @@ clean:
 	rm -f my_vm
 
 something:
-	$(CC) -g -o my_vm my_vm.c
+	$(CC) -g -m32 -o my_vm my_vm.c -lm

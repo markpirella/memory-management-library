@@ -20,13 +20,11 @@
 
 #define ADDRESS_BIT_LENGTH 32
 
-
 // Represents a page table entry
 typedef unsigned long pte_t;
 
 // Represents a page directory entry
 typedef pte_t *pde_t;
-
 
 
 #define TLB_SIZE 120
@@ -56,6 +54,10 @@ void print_TLB_missrate();
 /*
 Our functions
 */
+char *exceptions[] = {
+    "SUCCESS",
+    "VIRTUAL ADDRESS IS ALREADY MAPPED"
+    };
 
 
 void SetBitRange(int A[], int a, int b);
@@ -66,5 +68,7 @@ int TestBit(int A[],  int k); // return value of bit at the k-th position in A[i
 /*
 End our functions
 */
+
+
 
 #endif

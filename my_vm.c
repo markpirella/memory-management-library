@@ -1,5 +1,7 @@
 #include "my_vm.h"
 
+int myerrno = 0;
+
 int *physBitmap;
 int *virtBitmap;
 
@@ -19,6 +21,14 @@ int initialized = 0; // stores value to help determine if physical memory has be
 
 int main()
 {
+    void *va, *pa;
+    numOffsetBits = numOuterIndexBits = numInnerIndexBits = 4;
+
+    va = (void*)0x440;
+    pa = (void*)0x440;
+    pageDir = malloc(sizeof(pde_t)*(int)pow(2, numOuterIndexBits));
+    
+    PageMap(pageDir, va, pa);
     printf("HELLO WORLD!\n");
 }
 /*
@@ -82,9 +92,7 @@ void SetPhysicalMem() {
 
     pde_t temp3[numPageDirEntries];
     pageDir = temp3;
-    for(i = 0; i < numPageDirEntries; i++){
-        pageDir[i] = 0;
-    }
+    memset(pageDir, 0, numPageDirEntries*sizeof(pde_t));
 
     //printf("outer bits: %d, inner bits: %d, offset bits: %d\n", numOuterIndexBits, numInnerIndexBits, numOffsetBits);
 
@@ -172,7 +180,7 @@ pte_t * Translate(pde_t *pgdir, void *va) {
     if(pdir_index < 0 ){ // pde not found, so return null
         return NULL;
     }
-    // otherwise, page directory was found so continue on
+    otherwise, page directory was found so continue on
     */ //i dont think the above is right, misread the instructions ^^^^^^^^
 
     int pDirMask = 0;
@@ -202,16 +210,51 @@ pte_t * Translate(pde_t *pgdir, void *va) {
 The function takes a page directory address, virtual address, physical address
 as an argument, and sets a page table entry. This function will walk the page
 directory to see if there is an existing mapping for a virtual address. If the
-virtual address is not present, then a new entry will be added
+virtual address is not present, then a new entry will be added.
+Returns:
+    0 - Success
+    -1 - Failure, set myerrno appropriately
 */
-int
-PageMap(pde_t *pgdir, void *va, void *pa)
+int PageMap(pde_t *pgdir, void *va, void *pa)
 {
+    //! Alec
     /*HINT: Similar to Translate(), find the page directory (1st level)
     and page table (2nd-level) indices. If no mapping exists, set the
     virtual to physical mapping */
 
-    return -1;
+    // init all variables
+    unsigned long virtAddress, pageTableMask, pageTableIndex, pageDirIndex;
+
+    // cast the virtual address and remove the offset bits, since we are only accessing the page, not its contents
+    virtAddress = ((unsigned long)va) >> numOffsetBits;
+
+    // get the last numInnerIndexBits bits in the virtual address, since offset bits have been truncated
+    pageTableMask = (unsigned long)pow(2, numInnerIndexBits) - 1;
+    pageTableIndex = virtAddress & pageTableMask;
+
+    // truncate the page table bits and set the remaining bits as pageDirIndex
+    pageDirIndex = virtAddress >> numInnerIndexBits;
+
+    if(pgdir[pageDirIndex] == NULL)
+    {
+        // allocates memory for a page table array of size 2^numInnerIndexBits
+        unsigned long numEntriesInPageTable = (unsigned long)pow(2, numInnerIndexBits);
+        unsigned long sizeOfPageTable = sizeof(pte_t) * numEntriesInPageTable;
+        pgdir[pageDirIndex] = malloc(sizeOfPageTable);
+        memset(pgdir[pageDirIndex], 0, sizeOfPageTable);
+    }
+
+    // Checks if the virtual address has already been mapped/not cleared
+    if(pgdir[pageDirIndex][pageTableIndex] != 0)
+    {
+        myerrno = 1;
+        return -1;
+    }
+
+    // Assign it
+    pgdir[pageDirIndex][pageTableIndex] = (unsigned long)pa;
+
+    return 0;
 }
 
 
