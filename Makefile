@@ -19,3 +19,7 @@ test:
 clean:
 	rm -rf *.o *.a
 	rm -f test
+	rm -f my_vm
+
+something:
+	$(CC) -g -o my_vm my_vm.c

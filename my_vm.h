@@ -18,11 +18,14 @@
 
 #define MEMSIZE 1024*1024*1024
 
+#define ADDRESS_BIT_LENGTH 32
+
+
 // Represents a page table entry
 typedef unsigned long pte_t;
 
 // Represents a page directory entry
-typedef unsigned long pde_t;
+typedef pte_t *pde_t;
 
 
 
@@ -54,11 +57,12 @@ void print_TLB_missrate();
 Our functions
 */
 
-void SetBitRange(int[] A, int a, int b);
-void SetBit(int[] A, int k);
-void ClearBit(int[] A, int k);
-int TestBit(int[] A, int k);
 
+void SetBitRange(int A[], int a, int b);
+
+void SetBit(int A[], int k); // set the bit at the k-th position in A[i]
+void ClearBit(int A[], int k); // clear the bit at the k-th position in A[i]
+int TestBit(int A[],  int k); // return value of bit at the k-th position in A[i]
 /*
 End our functions
 */
