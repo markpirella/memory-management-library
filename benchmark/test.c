@@ -7,6 +7,12 @@
 
 int main() {
 
+    /*
+    SetPhysicalMem();
+    Translate(NULL, (void*)0xAF1);
+    return 0;
+    */
+
     printf("Allocating three arrays of 400 bytes\n");
     void *a = myalloc(100*4);
     int old_a = (int)a;

@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -c -m32
+CFLAGS = -g -c -m32 -lm
 AR = ar -rc
 RANLIB = ranlib
 
@@ -22,4 +22,4 @@ clean:
 	rm -f my_vm
 
 something:
-	$(CC) -g -o my_vm my_vm.c
+	$(CC) -g -m32 -o my_vm my_vm.c -lm

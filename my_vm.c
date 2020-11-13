@@ -1,9 +1,11 @@
 #include "my_vm.h"
 
+int myerrno = 0;
+
 int *physBitmap;
 int *virtBitmap;
 
-pde_t *pageDir; // pointer to page directory (array of page directory entries)
+pde_t *pageDir = NULL; // pointer to page directory (array of page directory entries)
 
 void *physMem = NULL; // void pointer to point to the start of allocated physical memory
 
@@ -15,8 +17,22 @@ int numOuterIndexBits = 0; // stores the number of bits used to calculate the ou
 int numInnerIndexBits = 0; // stores the number of bits used to calculate the inner index (index of page table) in virtual addresses (ex. bits 31:22 for PGSIZE = 4096)
 int numPageDirEntries = 0; // stores the number of page dir entries for easy traversal through array
 
-int initialized = 0; // stores value to help determine if physical memory has been initialized yet
+int initialized = 0; // stores value representing whether or not physical memory has been initialized yet
 
+/*
+int main()
+{
+    void *va, *pa;
+    numOffsetBits = numOuterIndexBits = numInnerIndexBits = 4;
+
+    va = (void*)0x440;
+    pa = (void*)0x440;
+    pageDir = malloc(sizeof(pde_t)*(int)pow(2, numOuterIndexBits));
+    
+    PageMap(pageDir, va, pa);
+    printf("HELLO WORLD!\n");
+}
+*/
 /*
 Function responsible for allocating and setting your physical memory
 */
@@ -31,27 +47,30 @@ void SetPhysicalMem() {
     // store appropriate number of virtual pages
     numVirtPages = MAX_MEMSIZE / PGSIZE;
 
+    printf("numvirtpages: %d\n", numVirtPages);
+
     // store appropriate number of physical pages
     numPhysPages = MEMSIZE / PGSIZE;
 
-    // set number of offset bits to log-base-2 of PGSIZE (ex. 12 for PGSIZE = 4096)
+    // set number of offset bits to log-base-2 of PGSIZE (ex. numOffsetBits = 12 for PGSIZE = 4096)
     numOffsetBits = log(PGSIZE) / log(2);
 
     // set number of outer index bits to half of bitspace remaining for use in the virtual address (ex. 10 for PGSIZE = 4096)
-    numOuterIndexBits = (32 - numOffsetBits) / 2;
+    numOuterIndexBits = (ADDRESS_BIT_LENGTH - numOffsetBits) / 2;
 
     // set number of outer index bits to the number of bits remaining for use in the virtual address (ex. 10 for PGSIZE = 4096)
-    numInnerIndexBits = 32 - (numOffsetBits + numOuterIndexBits);
+    numInnerIndexBits = ADDRESS_BIT_LENGTH - (numOffsetBits + numOuterIndexBits);
 
     // store number of page dir entries based on number of outer index bits
-    //! NUMBSKULL
-    numPageDirEntries = 2^numOuterIndexBits;
+    numPageDirEntries = pow(2, numOuterIndexBits);
 
     // determine number of elements needed in virtual bitmap (bit array)
-    int bitmapLength = numVirtPages / 32;
-    if(numVirtPages % 32 != 0){
+    int bitmapLength = numVirtPages / ADDRESS_BIT_LENGTH;
+    if(numVirtPages % ADDRESS_BIT_LENGTH != 0){
         bitmapLength++;
     }
+
+    printf("virtual bitmap length: %d\n", bitmapLength);
 
     // allocate and initialize virtual bitmap
     int temp[bitmapLength];
@@ -62,10 +81,12 @@ void SetPhysicalMem() {
     }
 
     // determine number of elements needed in physical bitmap (bit array)
-    bitmapLength = numPhysPages / 32;
-    if(numPhysPages % 32 != 0){
+    bitmapLength = numPhysPages / ADDRESS_BIT_LENGTH;
+    if(numPhysPages % ADDRESS_BIT_LENGTH != 0){
         bitmapLength++;
     }
+
+    printf("physical bitmap length: %d\n", bitmapLength);
 
     // allocate and initialize physical bitmap
     int temp2[bitmapLength];
@@ -78,9 +99,9 @@ void SetPhysicalMem() {
 
     pde_t temp3[numPageDirEntries];
     pageDir = temp3;
-    for(i = 0; i < numPageDirEntries; i++){
-        pageDir[i] = 0;
-    }
+    memset(pageDir, 0, numPageDirEntries*sizeof(pde_t));
+
+    printf("number of page directory entries: %d\n", numPageDirEntries);
 
     //printf("outer bits: %d, inner bits: %d, offset bits: %d\n", numOuterIndexBits, numInnerIndexBits, numOffsetBits);
 
@@ -152,6 +173,9 @@ The function takes a virtual address and page directories starting address and
 performs translation to return the physical address
 */
 pte_t * Translate(pde_t *pgdir, void *va) {
+
+    //! Mark
+
     //HINT: Get the Page directory index (1st level) Then get the
     //2nd-level-page table index using the virtual address.  Using the page
     //directory index and page table index get the physical address
@@ -168,29 +192,52 @@ pte_t * Translate(pde_t *pgdir, void *va) {
     if(pdir_index < 0 ){ // pde not found, so return null
         return NULL;
     }
-    // otherwise, page directory was found so continue on
+    otherwise, page directory was found so continue on
     */ //i dont think the above is right, misread the instructions ^^^^^^^^
 
     int pDirMask = 0;
     int i;
-    for(i = numOffsetBits + numInnerIndexBits; i < 32; i++){
+    for(i = numOffsetBits + numInnerIndexBits; i < ADDRESS_BIT_LENGTH; i++){
         pDirMask |= (0x1 << i);
     }
 
     int pTableMask = 0;
-    for(i = numOffsetBits; i < 32 - numOuterIndexBits; i++){
+    for(i = numOffsetBits; i < ADDRESS_BIT_LENGTH - numOuterIndexBits; i++){
         pTableMask |= (0x1 << i);
     }
+    ////printf("pTableMask: %x\n", pTableMask);
     
-    int pdir_index = ((int)va & pDirMask) >> (numOffsetBits + numInnerIndexBits); // grab outer index bits in address using pDirMask and store as index of pde
-    int ptable_index = ((int)va & pTableMask) >> numOffsetBits; // grab inner index bits in address using pTableMask and store as index of pte
-    //! WTF 
-    int offset = (int)va & (int)((2^numOffsetBits) - 1); // grab offset bits and store in offset variable
+    // grab outer index bits in address using pDirMask and store as page_directory_index
+    int pdir_index = ((int)va & pDirMask) >> (numOffsetBits + numInnerIndexBits);
 
+    // grab inner index bits in address using pTableMask and store as page_table_index
+    int ptable_index = ((int)va & pTableMask) >> numOffsetBits;
+
+    ////printf("dir index: %d, table index: %d\n", pdir_index, ptable_index);
+
+    ////int offset = (int)va & (int)(pow(numOffsetBits, 2) - 1); // grab offset bits and store in offset variable
+    
+    return (pte_t*)(*(pgdir+pdir_index) + (ptable_index*ADDRESS_BIT_LENGTH));
+    // return value explained: *(pgdir+pdir_index) -> dereference address stored at index pdir_index in pgdir (!!! dereferenced as unsigned long, so must do normal arithmetic with it afterwards, not pointer arithmetic)
+    //                          (ptable_index*ADDRESS_BIT_LENGTH) -> this is how many entries into the 2nd level page table we must go (using normal arithmetic)
+    //                          + -> adding the two together: starting address (as an unsigned long) of 2nd level page table + number of entries to go through
+    //                          (pte_t*) -> cast the resulting unsigned long as a pointer (it is now a pointer to the desired page table entry) and return it
+
+    /*
+    // obtain pointer to appropriate 2nd level page table entry
+    //pte_t pte = *(pgdir + pdir_index);
+    // obtain pointer to desired page table entry
+    //pte_t *ret = (pte + ptable_index);
+    // return pointer just obtained
+    //return ret;
+    */
+
+    /*
     // *** now, get and return physical address from pagedir[pdir_index] ---> pagetable[ptable_index] ---> offset
 
     //If translation not successfull
     return NULL;
+    */
 }
 
 
@@ -198,16 +245,51 @@ pte_t * Translate(pde_t *pgdir, void *va) {
 The function takes a page directory address, virtual address, physical address
 as an argument, and sets a page table entry. This function will walk the page
 directory to see if there is an existing mapping for a virtual address. If the
-virtual address is not present, then a new entry will be added
+virtual address is not present, then a new entry will be added.
+Returns:
+    0 - Success
+    -1 - Failure, set myerrno appropriately
 */
-int
-PageMap(pde_t *pgdir, void *va, void *pa)
+int PageMap(pde_t *pgdir, void *va, void *pa)
 {
+    //! Alec
     /*HINT: Similar to Translate(), find the page directory (1st level)
     and page table (2nd-level) indices. If no mapping exists, set the
     virtual to physical mapping */
 
-    return -1;
+    // init all variables
+    unsigned long virtAddress, pageTableMask, pageTableIndex, pageDirIndex;
+
+    // cast the virtual address and remove the offset bits, since we are only accessing the page, not its contents
+    virtAddress = ((unsigned long)va) >> numOffsetBits;
+
+    // get the last numInnerIndexBits bits in the virtual address, since offset bits have been truncated
+    pageTableMask = (unsigned long)pow(2, numInnerIndexBits) - 1;
+    pageTableIndex = virtAddress & pageTableMask;
+
+    // truncate the page table bits and set the remaining bits as pageDirIndex
+    pageDirIndex = virtAddress >> numInnerIndexBits;
+
+    if(pgdir[pageDirIndex] == NULL)
+    {
+        // allocates memory for a page table array of size 2^numInnerIndexBits
+        unsigned long numEntriesInPageTable = (unsigned long)pow(2, numInnerIndexBits);
+        unsigned long sizeOfPageTable = sizeof(pte_t) * numEntriesInPageTable;
+        pgdir[pageDirIndex] = malloc(sizeOfPageTable);
+        memset(pgdir[pageDirIndex], 0, sizeOfPageTable);
+    }
+
+    // Checks if the virtual address has already been mapped/not cleared
+    if(pgdir[pageDirIndex][pageTableIndex] != 0)
+    {
+        myerrno = 1;
+        return -1;
+    }
+
+    // Assign it
+    pgdir[pageDirIndex][pageTableIndex] = (unsigned long)pa;
+
+    return 0;
 }
 
 
@@ -223,19 +305,87 @@ void *get_next_avail(int num_pages) {
 */
 
 /*
-Function that gets the next available virtual page
-*/
-void *get_next_avail_virt(int num_pages) {
+void *createAddressFromBitmapIndex(int index){
+    void* address;
 
-    //Use virtual address bitmap to find the next free *virtual* page
+    int pDirMask = 0;
+    int i;
+    for(i = numOffsetBits + numInnerIndexBits; i < ADDRESS_BIT_LENGTH; i++){
+        pDirMask |= (0x1 << i);
+    }
+
+    int pTableMask = 0;
+    for(i = numOffsetBits; i < ADDRESS_BIT_LENGTH - numOuterIndexBits; i++){
+        pTableMask |= (0x1 << i);
+    }
+    
+    // grab outer index bits in address using pDirMask and store as page_directory_index
+    int pdir_index = ((int)va & pDirMask) >> (numOffsetBits + numInnerIndexBits);
+
+    // grab inner index bits in address using pTableMask and store as page_table_index
+    int ptable_index = ((int)va & pTableMask) >> numOffsetBits;
+}
+*/
+
+/*
+Function that gets the next available virtual page(s) (if multiple pages, will return address of the first one)
+*/
+void *get_next_avail_virt(int num_pages_to_find) {
+
+    //! Mark
+
+    //Use virtual address bitmap to find the next free *virtual* pages
+
+    int i;
+    for(i = 0; i < numVirtPages; i++){
+        if(TestBit(virtBitmap, i) == 0){ // found a 0
+            // now make sure there are enough contiguous 0's
+            int j;
+            int foundEnoughZeroes = 1;
+            for(j = 0; j < num_pages_to_find; j++){
+                i++;
+                if(i > numVirtPages || TestBit(virtBitmap, i) != 0){ // not enough contiguous 0's or reached end of virtual bitmap
+                    foundEnoughZeroes = 0;
+                    break;
+                }
+            }
+            if(foundEnoughZeroes){
+                // *build appropriate virtual address and return it*
+                unsigned long ret = ((i-j) / (int)pow(2, numInnerIndexBits)) << numInnerIndexBits;
+                ret += ((i-j) % (int)pow(2, numInnerIndexBits)) << numOffsetBits;
+                return (void*)ret;
+            }
+
+        }
+    }
+    return NULL;
 }
 
 /*
-Function that gets the next available physical page
+Function that gets the next available physical page (returns array of unsigned long when successful; returns NULL when unsuccessful)
 */
-void *get_next_avail_phys(int num_pages) {
+//! returns address based on physical bitmap - the return value must be added to the address
+//! of the start of physical memory (void *physMem) in order to get real physical memory address
+unsigned long *get_next_avail_phys(int num_pages_to_find) {
+
+    //! Mark
 
     //Use virtual address bitmap to find the next free *physical* page
+
+    unsigned long *physPages = malloc(num_pages_to_find * sizeof(void*));
+
+    int numPagesFound = 0;
+    int i;
+    for(i = 0; i < numPhysPages && numPagesFound < num_pages_to_find; i++){
+        if(TestBit(physBitmap, i) == 0){
+            physPages[numPagesFound] = i*PGSIZE;
+            numPagesFound++;
+        }
+    }
+    if(numPagesFound != num_pages_to_find){ // not enough physical pages left -> return NULL
+        return NULL;
+    }
+    return physPages;
 }
 
 
