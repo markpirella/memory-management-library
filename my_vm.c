@@ -79,6 +79,7 @@ void SetPhysicalMem() {
     for(i = 0; i < bitmapLength; i++){
         virtBitmap[i] = 0;
     }
+    SetBit(virtBitmap, 0);
 
     // determine number of elements needed in physical bitmap (bit array)
     bitmapLength = numPhysPages / ADDRESS_BIT_LENGTH;
@@ -334,22 +335,33 @@ void *get_next_avail_virt(int num_pages_to_find) {
 
     //! Mark
 
+    printf("%d%d%d\n", virtBitmap[0], virtBitmap[1], virtBitmap[2]);
+
     //Use virtual address bitmap to find the next free *virtual* pages
 
     int i;
     for(i = 0; i < numVirtPages; i++){
         if(TestBit(virtBitmap, i) == 0){ // found a 0
+            printf("found a 0 at %d\n", i);
             // now make sure there are enough contiguous 0's
             int j;
             int foundEnoughZeroes = 1;
-            for(j = 0; j < num_pages_to_find; j++){
+            for(j = 0; j < num_pages_to_find-1; j++){
                 i++;
                 if(i > numVirtPages || TestBit(virtBitmap, i) != 0){ // not enough contiguous 0's or reached end of virtual bitmap
+                printf("did NOT find a 0 at %d\n", j);
                     foundEnoughZeroes = 0;
                     break;
                 }
+                printf("found a 0 at %d\n", j);
             }
             if(foundEnoughZeroes){
+                puts("found enough 0's");
+                // set bits to 1
+                int k;
+                for(k = 0; k <= j; k++){
+                    SetBit(virtBitmap, i-k);
+                }
                 // *build appropriate virtual address and return it*
                 unsigned long ret = ((i-j) / (int)pow(2, numInnerIndexBits)) << numInnerIndexBits;
                 ret += ((i-j) % (int)pow(2, numInnerIndexBits)) << numOffsetBits;
@@ -385,6 +397,11 @@ unsigned long *get_next_avail_phys(int num_pages_to_find) {
     if(numPagesFound != num_pages_to_find){ // not enough physical pages left -> return NULL
         return NULL;
     }
+    // set the bits to 1
+    int j;
+    for(j = 0; j < num_pages_to_find; j++){
+        SetBit(physBitmap, physPages[j]/PGSIZE);
+    }
     return physPages;
 }
 
@@ -393,6 +410,8 @@ unsigned long *get_next_avail_phys(int num_pages_to_find) {
 and used by the benchmark
 */
 void *myalloc(unsigned int num_bytes) {
+
+    //! Mark
 
     //HINT: If the physical memory is not yet initialized, then allocate and initialize.
 
@@ -404,11 +423,56 @@ void *myalloc(unsigned int num_bytes) {
 
     // initialize physical memory using SetPhysicalMem() if this is first user call to myalloc()
     if(initialized == 0){
+        puts("INITIALIZING");
         SetPhysicalMem();
         initialized = 1;
     }
+    puts("CALLED MYALLOC");
 
-    return NULL;
+    // calculate number of pages that need to be allocated
+    unsigned long numPagesToAllocate = (num_bytes / PGSIZE) + 1;
+
+    // find next available virtual pages, and check for failure. (bits in bitmap will be set by get_next_avail_virt function, so no need to worry about that)
+    void *firstVirtPagePtr = get_next_avail_virt(numPagesToAllocate);
+    if(firstVirtPagePtr == NULL){
+        puts("myalloc failed - no virtual space left");
+        return NULL;
+    }
+
+    // find next available physical pages, and check for failure. (bits in bitmap will be set by get_next_avail_phys function, so no need to worry about that)
+    unsigned long *physPages = get_next_avail_phys(numPagesToAllocate);
+    if(physPages == NULL){
+        puts("myalloc failed - no physical space left");
+        return NULL;
+    }
+
+    // now insert virtual -> physical mapping(s) into page table
+    int i;
+    for(i = 0; i < numPagesToAllocate; i++){
+
+        unsigned long virtAddress = (unsigned long)firstVirtPagePtr;
+        virtAddress += i << numOffsetBits;
+        unsigned long physAddress = physPages[i] + (unsigned long)physMem;
+        PageMap(pageDir, (void*)virtAddress, (void*)physAddress);
+
+        /*
+        // cast the virtual address and remove the offset bits, since we are only accessing the page, not its contents
+        unsigned long virtAddress = ((unsigned long)firstVirtPagePtr) >> numOffsetBits;
+
+        // have to get all virtual pages in sequence, so add i to virtAddress (to access all sequential page table entries necessary)
+        virtAddress += i;
+
+        // get the last numInnerIndexBits bits in the virtual address, since offset bits have been truncated
+        unsigned long pageTableMask = (unsigned long)pow(2, numInnerIndexBits) - 1;
+        unsigned long pageTableIndex = virtAddress & pageTableMask;
+
+        // truncate the page table bits and set the remaining bits as pageDirIndex
+        unsigned long pageDirIndex = virtAddress >> numInnerIndexBits;
+        */
+
+    }
+
+    return (void*)physPages[0];
 
 }
 
@@ -476,21 +540,21 @@ void SetBitRange(int A[], int a, int b){
 }
 
 /*
-set the bit at the k-th position in A[i]
+set the bit at the k-th position in A[]
 */
 void SetBit(int A[], int k){
     A[k/32] |= 1 << (k%32); 
 }
 
 /*
-clear the bit at the k-th position in A[i]
+clear the bit at the k-th position in A[]
 */
 void ClearBit(int A[], int k){
     A[k/32] &= ~(1 << (k%32));
 }
 
 /*
-return value of bit at the k-th position in A[i]
+return value of bit at the k-th position in A[]
 */
 int TestBit(int A[],  int k){
     return ( (A[k/32] & (1 << (k%32) )) != 0);
