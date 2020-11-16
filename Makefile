@@ -11,10 +11,10 @@ my_vm.a: my_vm.o
 
 my_vm.o: my_vm.h
 
-	$(CC) $(CFLAGS)  my_vm.c
+	$(CC) $(CFLAGS)  my_vm.c -lm
 
 test: 
-	$(CC) -g -m32 test.c -o test -L. -lmy_vm
+	$(CC) -g -m32 test.c -o test -L. -lmy_vm -lm
 
 clean:
 	rm -rf *.o *.a

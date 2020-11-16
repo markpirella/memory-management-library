@@ -20,6 +20,9 @@
 
 #define ADDRESS_BIT_LENGTH 32
 
+#define min(X,Y) ((X) < (Y) ? (X) : (Y))
+#define max(X,Y) ((X) > (Y) ? (X) : (Y))
+
 // Represents a page table entry
 typedef unsigned long pte_t;
 

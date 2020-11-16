@@ -196,49 +196,25 @@ pte_t * Translate(pde_t *pgdir, void *va) {
     otherwise, page directory was found so continue on
     */ //i dont think the above is right, misread the instructions ^^^^^^^^
 
-    int pDirMask = 0;
+    unsigned long pDirMask = 0;
     int i;
     for(i = numOffsetBits + numInnerIndexBits; i < ADDRESS_BIT_LENGTH; i++){
         pDirMask |= (0x1 << i);
     }
 
-    int pTableMask = 0;
+    unsigned long pTableMask = 0;
     for(i = numOffsetBits; i < ADDRESS_BIT_LENGTH - numOuterIndexBits; i++){
         pTableMask |= (0x1 << i);
     }
     ////printf("pTableMask: %x\n", pTableMask);
     
     // grab outer index bits in address using pDirMask and store as page_directory_index
-    int pdir_index = ((int)va & pDirMask) >> (numOffsetBits + numInnerIndexBits);
+    unsigned long pdir_index = ((unsigned long)va & pDirMask) >> (numOffsetBits + numInnerIndexBits);
 
     // grab inner index bits in address using pTableMask and store as page_table_index
-    int ptable_index = ((int)va & pTableMask) >> numOffsetBits;
-
-    ////printf("dir index: %d, table index: %d\n", pdir_index, ptable_index);
-
-    ////int offset = (int)va & (int)(pow(numOffsetBits, 2) - 1); // grab offset bits and store in offset variable
+    unsigned long ptable_index = ((unsigned long)va & pTableMask) >> numOffsetBits;
     
-    return (pte_t*)(*(pgdir+pdir_index) + (ptable_index*ADDRESS_BIT_LENGTH));
-    // return value explained: *(pgdir+pdir_index) -> dereference address stored at index pdir_index in pgdir (!!! dereferenced as unsigned long, so must do normal arithmetic with it afterwards, not pointer arithmetic)
-    //                          (ptable_index*ADDRESS_BIT_LENGTH) -> this is how many entries into the 2nd level page table we must go (using normal arithmetic)
-    //                          + -> adding the two together: starting address (as an unsigned long) of 2nd level page table + number of entries to go through
-    //                          (pte_t*) -> cast the resulting unsigned long as a pointer (it is now a pointer to the desired page table entry) and return it
-
-    /*
-    // obtain pointer to appropriate 2nd level page table entry
-    //pte_t pte = *(pgdir + pdir_index);
-    // obtain pointer to desired page table entry
-    //pte_t *ret = (pte + ptable_index);
-    // return pointer just obtained
-    //return ret;
-    */
-
-    /*
-    // *** now, get and return physical address from pagedir[pdir_index] ---> pagetable[ptable_index] ---> offset
-
-    //If translation not successfull
-    return NULL;
-    */
+    return &pgdir[pdir_index][ptable_index];
 }
 
 
@@ -251,6 +227,7 @@ Returns:
     0 - Success
     -1 - Failure, set myerrno appropriately
 */
+//? What's the format of pa? As in, should I be worried about handling offset bits?
 int PageMap(pde_t *pgdir, void *va, void *pa)
 {
     //! Alec
@@ -265,7 +242,7 @@ int PageMap(pde_t *pgdir, void *va, void *pa)
     virtAddress = ((unsigned long)va) >> numOffsetBits;
 
     // get the last numInnerIndexBits bits in the virtual address, since offset bits have been truncated
-    pageTableMask = (unsigned long)pow(2, numInnerIndexBits) - 1;
+    pageTableMask = (unsigned long)pow(2, numInnerIndexBits) - 1; // 10 1s
     pageTableIndex = virtAddress & pageTableMask;
 
     // truncate the page table bits and set the remaining bits as pageDirIndex
@@ -289,6 +266,10 @@ int PageMap(pde_t *pgdir, void *va, void *pa)
 
     // Assign it
     pgdir[pageDirIndex][pageTableIndex] = (unsigned long)pa;
+
+    // Change bitmap values
+    SetBit(virtBitmap, (pageDirIndex << numInnerIndexBits) + pageTableIndex);
+    SetBit(physBitmap, ((unsigned long)(pa - physMem) >> numOffsetBits));
 
     return 0;
 }
@@ -430,7 +411,7 @@ void *myalloc(unsigned int num_bytes) {
     puts("CALLED MYALLOC");
 
     // calculate number of pages that need to be allocated
-    unsigned long numPagesToAllocate = (num_bytes / PGSIZE) + 1;
+    unsigned long numPagesToAllocate = ceil((double)num_bytes / PGSIZE);
 
     // find next available virtual pages, and check for failure. (bits in bitmap will be set by get_next_avail_virt function, so no need to worry about that)
     void *firstVirtPagePtr = get_next_avail_virt(numPagesToAllocate);
@@ -450,10 +431,10 @@ void *myalloc(unsigned int num_bytes) {
     int i;
     for(i = 0; i < numPagesToAllocate; i++){
 
-        unsigned long virtAddress = (unsigned long)firstVirtPagePtr;
+        void *virtAddress = firstVirtPagePtr;
         virtAddress += i << numOffsetBits;
-        unsigned long physAddress = physPages[i] + (unsigned long)physMem;
-        PageMap(pageDir, (void*)virtAddress, (void*)physAddress);
+        void *physAddress = physMem + physPages[i];
+        PageMap(pageDir, virtAddress, physAddress);
 
         /*
         // cast the virtual address and remove the offset bits, since we are only accessing the page, not its contents
@@ -472,41 +453,144 @@ void *myalloc(unsigned int num_bytes) {
 
     }
 
-    return (void*)physPages[0];
+    return firstVirtPagePtr;
 
 }
 
-/* Responsible for releasing one or more memory pages using virtual address (va)
+/**
+ * Responsible for releasing one or more memory pages using virtual address (va)
+ * Procedure:
+ *  Find the number of pages to free by max(1, ceil(size/pagesize))
+ *  "Page index" is the first numOuterIndexBits + numInnerIndexBits bits of va
+ *  Set virtbitmap and corresponding physbitmap values to 0 for all necessary pages
 */
 void myfree(void *va, int size) {
+    //!Alec
 
-    //Free the page table entries starting from this virtual address (va)
+    // Free the page table entries starting from this virtual address (va)
     // Also mark the pages free in the bitmap
-    //Only free if the memory from "va" to va+size is valid
+    // Only free if the memory from "va" to va+size is valid
+
+    int numPages;
+    unsigned long pageIndex, *pageDirBitArray, *pageTableBitArray;
+    // Finds the number of pages we need to free
+    numPages = max(1, ceil((double)size/numPages));
+    pageDirBitArray = malloc(numPages * sizeof(unsigned long));
+    pageTableBitArray = malloc(numPages * sizeof(unsigned long));
+
+    // Truncate offset bits of the virtual address
+    pageIndex = (unsigned long)va >> numOffsetBits;
+
+    for(int i = 0; i < numPages; i++)
+    {
+        //init local variables
+        unsigned long pageDirBits, pageTableBits, pageTableMask;
+
+        // get the rightmost numInnerIndexBits Bits from the pageIndex
+        pageTableMask = (unsigned long)pow(2, numInnerIndexBits) - 1;
+        pageTableBits = (pageIndex + i) & pageTableMask;
+
+        // gets the remaining bits
+        pageDirBits = (pageIndex + i) >> numInnerIndexBits;
+
+        if(pageDir[pageDirBits] == NULL || pageDir[pageDirBits][pageTableBits] == NULL)
+        {
+            printf("SEGMENTATION FAULT: cannot free memory which has not been allocated first\n");
+            free(pageDirBitArray);
+            free(pageTableBitArray);
+            return;
+        }
+
+        // We need to validate that all the memory locations are valid before we free,
+        // so we store the indices in another array for later.
+        // Later we actually perform the freeing actions
+        pageDirBitArray  [i] = pageDirBits;
+        pageTableBitArray[i] = pageTableBits;
+    }
+
+    for(int i = 0; i < numPages; i++)
+    {
+        unsigned long virtBitmapIndex, physBitmapIndex, physAddr;
+
+        // restores the virtual address index
+        virtBitmapIndex = (pageDirBitArray[i] << numInnerIndexBits) + pageTableBitArray[i];
+
+        // retrieves the physical address from the page directory
+        physAddr = pageDir[pageDirBitArray[i]][pageTableBitArray[i]];
+
+        // truncates offset bits to get the bitmap index;
+        physBitmapIndex = physAddr >> numOffsetBits;
+
+        // Frees the memory
+        ClearBit(virtBitmap, virtBitmapIndex);
+        ClearBit(physBitmap, physBitmapIndex);
+        pageDir[pageDirBitArray[i]][pageTableBitArray[i]] = NULL;
+    }
+    free(pageDirBitArray);
+    free(pageTableBitArray);
 }
 
 
-/* The function copies data pointed by "val" to physical
+/**
+ * The function copies data pointed by "val" to physical
  * memory pages using virtual address (va)
 */
 void PutVal(void *va, void *val, int size) {
-
+    //! Alec
     /* HINT: Using the virtual address and Translate(), find the physical page. Copy
        the contents of "val" to a physical page. NOTE: The "size" value can be larger
        than one page. Therefore, you may have to find multiple pages using Translate()
        function.*/
 
+    int remainingBits = size;
+    char *data = (char*)val;
+
+
+    for(int i = 0; remainingBits > 0; i++)
+    {
+        // Get a pointer to the physical memory. We dereference the pointer given to get 
+        // the unsigned long, then cast that to a char* so we can reference the physical memory
+        char *physAddr = (char*)(*Translate(pageDir, va + (i << numOffsetBits)));
+
+        // Determine how many bits we are copying
+        int bitsToCopy = min(remainingBits, PGSIZE);
+        remainingBits -= bitsToCopy;
+
+        // copy the bits over to memory
+        strncpy(physAddr, data, bitsToCopy);
+
+        // increment data so we copy new data next time
+        data += bitsToCopy;
+    }
 }
 
 
 /*Given a virtual address, this function copies the contents of the page to val*/
 void GetVal(void *va, void *val, int size) {
 
+    //! Alec
     /* HINT: put the values pointed to by "va" inside the physical memory at given
     "val" address. Assume you can access "val" directly by derefencing them.
     If you are implementing TLB,  always check first the presence of translation
     in TLB before proceeding forward */
+    char *data = (char*)val;
+    int remainingBits = size;
+    for(int i = 0; remainingBits > 0; i++)
+    {
+        // Get a pointer to the physical memory. We dereference the pointer given to get 
+        // the unsigned long, then cast that to a char* so we can reference the physical memory
+        char *physAddr = (char*)(*Translate(pageDir, va + (i << numOffsetBits)));
 
+        // Determine how many bits we are copying
+        int bitsToCopy = min(remainingBits, PGSIZE);
+        remainingBits -= bitsToCopy;
+
+        // copy the bits over from memory
+        strncpy(data, physAddr, bitsToCopy);
+
+        // increment data so we copy new data next time
+        data += bitsToCopy;
+    }
 
 }
 
