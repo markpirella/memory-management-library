@@ -184,7 +184,7 @@ int remove_TLB(void *va)
  * Returns the physical page address.
  * Feel free to extend this function and change the return type.
  */
-void *
+pte_t *
 check_TLB(void *va) {
     //! Alec
     /* Part 2: TLB lookup code here */
@@ -194,7 +194,7 @@ check_TLB(void *va) {
     {
         if(ptr->entry->va == va)
         {
-            return ptr->entry->pa;
+            return (pte_t *)(&ptr->entry->pa);
         }
     }
     return NULL;
