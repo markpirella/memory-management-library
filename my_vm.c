@@ -200,7 +200,7 @@ check_TLB(void *va) {
         if(ptr->entry->va == va)
         {
             if(DEBUG) printf("***FOUND ADDRESS %x from TLB\n", ptr->entry->pa);
-            return (pte_t *)(ptr->entry->pa);
+            return (pte_t *)(&ptr->entry->pa);
         }
         ptr = ptr->next;
     }
@@ -250,7 +250,7 @@ pte_t * Translate(pde_t *pgdir, void *va) {
     pte_t *tlb_check = check_TLB(page);
     if(DEBUG) puts("here");
     if(tlb_check != NULL){
-        //return tlb_check;
+        return tlb_check;
     }
     if(DEBUG) puts("checked tlb");
 
