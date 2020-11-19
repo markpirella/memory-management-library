@@ -14,7 +14,7 @@ int main() {
     */
 
     printf("Allocating three arrays of 400 bytes\n");
-    void *a = myalloc(100*4);
+    void *a = myalloc(5000);
     int old_a = (int)a;
     void *b = myalloc(100*4);
     void *c = myalloc(100*4);
@@ -33,7 +33,9 @@ int main() {
             address_b = (unsigned int)b + ((i * SIZE * sizeof(int))) + (j * sizeof(int));
             PutVal((void *)address_a, &x, sizeof(int));
             PutVal((void *)address_b, &x, sizeof(int));
+            x++;
         }
+        x-=4;
     }
 
     printf("Fetching matrix elements stored in the arrays\n");
@@ -62,7 +64,7 @@ int main() {
         printf("\n");
     }
     printf("Freeing the allocations!\n");
-    myfree(a, 100*4);
+    myfree(a, 5000);
     myfree(b, 100*4);
     myfree(c, 100*4);
 
