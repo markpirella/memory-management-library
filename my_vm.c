@@ -57,7 +57,7 @@ void SetPhysicalMem() {
     numPhysPages = MEMSIZE / PGSIZE;
 
     // set number of offset bits to log-base-2 of PGSIZE (ex. numOffsetBits = 12 for PGSIZE = 4096)
-    numOffsetBits = log(PGSIZE) / log(2);
+    numOffsetBits = log2(PGSIZE);
 
     // set number of outer index bits to half of bitspace remaining for use in the virtual address (ex. 10 for PGSIZE = 4096)
     numOuterIndexBits = (ADDRESS_BIT_LENGTH - numOffsetBits) / 2;
@@ -69,7 +69,7 @@ void SetPhysicalMem() {
     numPageDirEntries = pow(2, numOuterIndexBits);
 
     // determine number of elements needed in virtual bitmap (bit array)
-    int bitmapLength = numVirtPages / ADDRESS_BIT_LENGTH;
+    int bitmapLength = numVirtPages / sizeof(int);
     if(numVirtPages % ADDRESS_BIT_LENGTH != 0){
         bitmapLength++;
     }
@@ -77,8 +77,8 @@ void SetPhysicalMem() {
     if(DEBUG) printf("virtual bitmap length: %d\n", bitmapLength);
 
     // allocate and initialize virtual bitmap
-    int temp[bitmapLength];
-    virtBitmap = temp;
+    //int temp[bitmapLength];
+    virtBitmap = malloc(sizeof(int)*bitmapLength);
     int i;
     for(i = 0; i < bitmapLength; i++){
         virtBitmap[i] = 0;
@@ -94,11 +94,12 @@ void SetPhysicalMem() {
     if(DEBUG) printf("physical bitmap length: %d\n", bitmapLength);
 
     // allocate and initialize physical bitmap
-    int temp2[bitmapLength];
-    physBitmap = temp2;
+    //int temp2[bitmapLength];
+    physBitmap = malloc(sizeof(int)*bitmapLength);
     for(i = 0; i < bitmapLength; i++){
         physBitmap[i] = 0;
     }
+    physBitmap[0] = 1 << (sizeof(int)*8 - 1);
 
     // allocate and initialize page directory
 
@@ -380,13 +381,13 @@ unsigned long *get_next_avail_phys(int num_pages_to_find) {
 
     //Use virtual address bitmap to find the next free *physical* page
 
-    unsigned long *physPages = malloc(num_pages_to_find * sizeof(void*));
+    unsigned long *physPages = malloc(num_pages_to_find * sizeof(unsigned long));
 
     int numPagesFound = 0;
     int i;
     for(i = 0; i < numPhysPages && numPagesFound < num_pages_to_find; i++){
         if(TestBit(physBitmap, i) == 0){
-            physPages[numPagesFound] = i*PGSIZE;
+            physPages[numPagesFound] = ((unsigned long)i)*PGSIZE;
             numPagesFound++;
         }
     }
@@ -535,7 +536,7 @@ void myfree(void *va, int size) {
         physAddr = pageDir[pageDirIndexArray[i]][pageTableIndexArray[i]];
 
         // truncates offset bits to get the bitmap index;
-        physBitmapIndex = physAddr >> numOffsetBits;
+        physBitmapIndex = physAddr >> numOffsetBits - (unsigned long)physMem;
 
         // Frees the memory
         ClearBit(virtBitmap, virtBitmapIndex);
