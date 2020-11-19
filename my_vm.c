@@ -24,6 +24,7 @@ unsigned int num_tlb_misses = 0; // stores the number of times the TLB checks en
 
 tlb *tlb_head = NULL;
 tlb *tlb_tail = NULL;
+int tlb_count = 0;
 /*
 int main()
 {
@@ -126,8 +127,58 @@ add_TLB(void *va, void *pa)
     //! Alec
     /*Part 2 HINT: Add a virtual to physical page translation to the TLB */
 
+    // Initialize new tlb entry with va and pa
+    tlb *newEntry = malloc(sizeof(tlb));
+    memset(newEntry, 0, sizeof(tlb));
+    newEntry->entry = malloc(sizeof(tlb_entry));
+    newEntry->entry->va = va;
+    newEntry->entry->pa = pa;
+    
+    // in edge case where tlb size is 0
+    if(TLB_SIZE == 0)
+        return 0;
+
+    // there are no entries
+    if(tlb_count++ == 0)
+    {
+        tlb_head = tlb_tail = newEntry;
+        return 0;
+    }
+    
+    newEntry->next = tlb_head;
+    tlb_head->prev = newEntry;
+    tlb_head = newEntry;
+    if(tlb_count > TLB_SIZE)
+    {
+        tlb_tail->prev->next = NULL;
+        tlb_count--;
+        free(tlb_tail->entry);
+        free(tlb_tail);
+    }
 
     return -1;
+}
+
+int remove_TLB(void *va)
+{
+    //! Alec
+    tlb *ptr = tlb_head;
+    while(ptr != NULL)
+    {
+        if(ptr->entry->va == va)
+        {
+            if(ptr->prev != NULL)
+                ptr->prev->next = ptr->next;
+            if(ptr->next != NULL)
+                ptr->next->prev = ptr->prev;
+            free(ptr->entry);
+            free(ptr);
+            tlb_count--;
+            return 0;
+        }
+        ptr = ptr->next;
+    }
+    return 1;
 }
 
 
@@ -140,6 +191,16 @@ pte_t *
 check_TLB(void *va) {
     //! Alec
     /* Part 2: TLB lookup code here */
+
+    tlb *ptr;
+    while(ptr != NULL)
+    {
+        if(ptr->entry->va == va)
+        {
+            return (pte_t *)(&ptr->entry->pa);
+        }
+    }
+    return NULL;
 
 }
 
