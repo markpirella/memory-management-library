@@ -14,7 +14,7 @@ int main() {
     */
 
     printf("Allocating three arrays of 400 bytes\n");
-    void *a = myalloc(5000);
+    void *a = myalloc(100*4);
     int old_a = (int)a;
     void *b = myalloc(100*4);
     void *c = myalloc(100*4);
@@ -64,7 +64,7 @@ int main() {
         printf("\n");
     }
     printf("Freeing the allocations!\n");
-    myfree(a, 5000);
+    myfree(a, 100*4);
     myfree(b, 100*4);
     myfree(c, 100*4);
 
@@ -75,5 +75,7 @@ int main() {
     else
         printf("free function does not work\n");
 
+
+    print_TLB_missrate();
     return 0;
 }

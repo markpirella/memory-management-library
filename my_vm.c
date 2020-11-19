@@ -19,6 +19,9 @@ int numPageDirEntries = 0; // stores the number of page dir entries for easy tra
 
 int initialized = 0; // stores value representing whether or not physical memory has been initialized yet
 
+unsigned int num_tlb_checks = 0; // stores the number of times the TLB is checked for an address mapping
+unsigned int num_tlb_misses = 0; // stores the number of times the TLB checks encounter a miss
+
 tlb *tlb_head = NULL;
 tlb *tlb_tail = NULL;
 int tlb_count = 0;
@@ -189,15 +192,19 @@ pte_t *
 check_TLB(void *va) {
     //! Alec
     /* Part 2: TLB lookup code here */
+    num_tlb_checks++;
 
-    tlb *ptr;
+    tlb *ptr = tlb_head;
     while(ptr != NULL)
     {
         if(ptr->entry->va == va)
         {
-            return (pte_t *)(&ptr->entry->pa);
+            if(DEBUG) printf("***FOUND ADDRESS %x from TLB\n", ptr->entry->pa);
+            return (pte_t *)(ptr->entry->pa);
         }
+        ptr = ptr->next;
     }
+    num_tlb_misses++;
     return NULL;
 
 }
@@ -213,9 +220,11 @@ print_TLB_missrate()
     //! Mark
     double miss_rate = 0;
 
+    printf("misses: %d, checks: %d\n", num_tlb_misses, num_tlb_checks);
+
     /*Part 2 Code here to calculate and print the TLB miss rate*/
 
-
+    miss_rate = (double)num_tlb_misses / (double)num_tlb_checks;
 
 
     fprintf(stderr, "TLB miss rate %lf \n", miss_rate);
@@ -234,7 +243,14 @@ pte_t * Translate(pde_t *pgdir, void *va) {
     //2nd-level-page table index using the virtual address.  Using the page
     //directory index and page table index get the physical address
 
-    //i dont think the above is right, misread the instructions ^^^^^^^^
+    //* first check TLB for virtual -> physical mapping. if not found, then continue on and find in page table
+    if(DEBUG) puts("about to check tlb");
+    pte_t *tlb_check = check_TLB(va);
+    if(DEBUG) puts("here");
+    if(tlb_check != NULL){
+        //return tlb_check;
+    }
+    if(DEBUG) puts("checked tlb");
 
     unsigned long pDirMask = 0;
     int i;
@@ -433,14 +449,14 @@ void *myalloc(unsigned int num_bytes) {
     // find next available virtual pages, and check for failure. (bits in bitmap will be set by get_next_avail_virt function, so no need to worry about that)
     void *firstVirtPagePtr = get_next_avail_virt(numPagesToAllocate);
     if(firstVirtPagePtr == NULL){
-        if(DEBUG) puts("myalloc failed - no virtual space left");
+        puts("myalloc failed - no virtual space left");
         return NULL;
     }
 
     // find next available physical pages, and check for failure. (bits in bitmap will be set by get_next_avail_phys function, so no need to worry about that)
     unsigned long *physPages = get_next_avail_phys(numPagesToAllocate);
     if(physPages == NULL){
-        if(DEBUG) puts("myalloc failed - no physical space left");
+        puts("myalloc failed - no physical space left");
         return NULL;
     }
 
@@ -457,7 +473,15 @@ void *myalloc(unsigned int num_bytes) {
         void *virtAddress = firstVirtPagePtr;
         virtAddress += (i << numOffsetBits);
         void *physAddress = (void*)((unsigned long)physMem + physPages[i]);
+
+        //! add new virtual -> physical mapping to TLB
+        if(DEBUG) printf("****INSERTING INTO TLB -> phys address: %x, at virt address: %x\n", (unsigned int)physAddress, (unsigned int)virtAddress);
+        add_TLB(virtAddress, physAddress);
+
+        //! add new virtual -> physical mapping to page table
         PageMap(pageDir, virtAddress, physAddress);
+
+
         if(DEBUG) printf("****INSERTING INTO PAGE TABLE -> phys address: %x, at virt address: %x\n", (unsigned int)physAddress, (unsigned int)virtAddress);
         if(DEBUG) printf("\n-----------------\nPAGE DIR LOOKS LIKE:\n");
         int y;
