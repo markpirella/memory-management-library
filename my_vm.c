@@ -191,15 +191,19 @@ pte_t *
 check_TLB(void *va) {
     //! Alec
     /* Part 2: TLB lookup code here */
+    num_tlb_checks++;
 
-    tlb *ptr;
+    tlb *ptr = tlb_head;
     while(ptr != NULL)
     {
         if(ptr->entry->va == va)
         {
-            return (pte_t *)(&ptr->entry->pa);
+            if(DEBUG) printf("***FOUND ADDRESS %x from TLB\n", ptr->entry->pa);
+            return (pte_t *)(ptr->entry->pa);
         }
+        ptr = ptr->next;
     }
+    num_tlb_misses++;
     return NULL;
 
 }
@@ -214,6 +218,8 @@ print_TLB_missrate()
 {
     //! Mark
     double miss_rate = 0;
+
+    printf("misses: %d, checks: %d\n", num_tlb_misses, num_tlb_checks);
 
     /*Part 2 Code here to calculate and print the TLB miss rate*/
 
@@ -237,10 +243,13 @@ pte_t * Translate(pde_t *pgdir, void *va) {
     //directory index and page table index get the physical address
 
     //* first check TLB for virtual -> physical mapping. if not found, then continue on and find in page table
-    pte_t *tlb_check = check_TLB;
+    if(DEBUG) puts("about to check tlb");
+    pte_t *tlb_check = check_TLB(va);
+    if(DEBUG) puts("here");
     if(tlb_check != NULL){
-        return tlb_check;
+        //return tlb_check;
     }
+    if(DEBUG) puts("checked tlb");
 
     unsigned long pDirMask = 0;
     int i;
@@ -465,6 +474,7 @@ void *myalloc(unsigned int num_bytes) {
         void *physAddress = (void*)((unsigned long)physMem + physPages[i]);
 
         //! add new virtual -> physical mapping to TLB
+        if(DEBUG) printf("****INSERTING INTO TLB -> phys address: %x, at virt address: %x\n", (unsigned int)physAddress, (unsigned int)virtAddress);
         add_TLB(virtAddress, physAddress);
 
         //! add new virtual -> physical mapping to page table
