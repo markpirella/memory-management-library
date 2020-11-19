@@ -44,6 +44,7 @@ void SetPhysicalMem() {
 
     // allocate physical memory and set the void pointer physMem to the start of the physical memory
     physMem = malloc(MEMSIZE);
+    printf("PHYSICAL MEMORY STARTS AT ADDRESS: %x\n", physMem);
     // store appropriate number of virtual pages
     numVirtPages = MAX_MEMSIZE / PGSIZE;
 
@@ -427,14 +428,26 @@ void *myalloc(unsigned int num_bytes) {
         return NULL;
     }
 
+    int h;
+    for(h = 0; h < numPagesToAllocate; h++){
+        printf("****************phys address: %x\t", physPages[h]);
+    }
+    puts("");
+
     // now insert virtual -> physical mapping(s) into page table
     int i;
     for(i = 0; i < numPagesToAllocate; i++){
 
         void *virtAddress = firstVirtPagePtr;
         virtAddress += i << numOffsetBits;
-        void *physAddress = physMem + physPages[i];
+        void *physAddress = (unsigned long)physMem + physPages[i];
         PageMap(pageDir, virtAddress, physAddress);
+        printf("****virt address: %x, phys address: %x\n", virtAddress, physAddress);
+        printf("\n-----------------\nPAGE DIR LOOKS LIKE:\n");
+        int y;
+        for(y = 0; y < 5; y++){
+            printf("index: %d phys address: %x\n", y, pageDir[0][y]);
+        }
 
         /*
         // cast the virtual address and remove the offset bits, since we are only accessing the page, not its contents
@@ -470,11 +483,14 @@ void myfree(void *va, int size) {
     // Free the page table entries starting from this virtual address (va)
     // Also mark the pages free in the bitmap
     // Only free if the memory from "va" to va+size is valid
-
+    
     int numPages;
     unsigned long pageIndex, *pageDirBitArray, *pageTableBitArray;
     // Finds the number of pages we need to free
-    numPages = max(1, ceil((double)size/numPages));
+    //!numPages = max(1, ceil((double)size/numPages)); <- possible issue - size/numPages but numPages is not initialized... instead size/PGSIZE ?
+    //numPages = max(1, ceil((double)size/numPages));
+    numPages = max(1, ceil((double)size/PGSIZE));
+    printf("NUM PAGES IN FREE FUNCTION: %d\n", numPages);
     pageDirBitArray = malloc(numPages * sizeof(unsigned long));
     pageTableBitArray = malloc(numPages * sizeof(unsigned long));
 
