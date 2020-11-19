@@ -44,6 +44,7 @@ void SetPhysicalMem() {
 
     // allocate physical memory and set the void pointer physMem to the start of the physical memory
     physMem = malloc(MEMSIZE);
+    printf("PHYSICAL MEMORY STARTS AT ADDRESS: %x\n", physMem);
     // store appropriate number of virtual pages
     numVirtPages = MAX_MEMSIZE / PGSIZE;
 
@@ -412,6 +413,7 @@ void *myalloc(unsigned int num_bytes) {
 
     // calculate number of pages that need to be allocated
     unsigned long numPagesToAllocate = ceil((double)num_bytes / PGSIZE);
+    printf("num pages to allocate: %d\n", numPagesToAllocate);
 
     // find next available virtual pages, and check for failure. (bits in bitmap will be set by get_next_avail_virt function, so no need to worry about that)
     void *firstVirtPagePtr = get_next_avail_virt(numPagesToAllocate);
@@ -427,14 +429,26 @@ void *myalloc(unsigned int num_bytes) {
         return NULL;
     }
 
+    int h;
+    for(h = 0; h < numPagesToAllocate; h++){
+        printf("****************phys address: %x\t", physPages[h]);
+    }
+    puts("");
+
     // now insert virtual -> physical mapping(s) into page table
     int i;
     for(i = 0; i < numPagesToAllocate; i++){
 
         void *virtAddress = firstVirtPagePtr;
-        virtAddress += i << numOffsetBits;
-        void *physAddress = physMem + physPages[i];
+        virtAddress += (i << numOffsetBits);
+        void *physAddress = (unsigned long)physMem + physPages[i];
         PageMap(pageDir, virtAddress, physAddress);
+        printf("****INSERTING INTO PAGE TABLE -> phys address: %x, at virt address: %x\n", physAddress, virtAddress);
+        printf("\n-----------------\nPAGE DIR LOOKS LIKE:\n");
+        int y;
+        for(y = 0; y < 5; y++){
+            printf("index: %d phys address: %x\n", y, pageDir[0][y]);
+        }
 
         /*
         // cast the virtual address and remove the offset bits, since we are only accessing the page, not its contents
@@ -470,11 +484,14 @@ void myfree(void *va, int size) {
     // Free the page table entries starting from this virtual address (va)
     // Also mark the pages free in the bitmap
     // Only free if the memory from "va" to va+size is valid
-
+    
     int numPages;
     unsigned long pageIndex, *pageDirBitArray, *pageTableBitArray;
     // Finds the number of pages we need to free
-    numPages = max(1, ceil((double)size/numPages));
+    //!numPages = max(1, ceil((double)size/numPages)); <- possible issue - size/numPages but numPages is not initialized... instead size/PGSIZE ?
+    //numPages = max(1, ceil((double)size/numPages));
+    numPages = max(1, ceil((double)size/PGSIZE));
+    printf("NUM PAGES IN FREE FUNCTION: %d\n", numPages);
     pageDirBitArray = malloc(numPages * sizeof(unsigned long));
     pageTableBitArray = malloc(numPages * sizeof(unsigned long));
 
@@ -542,8 +559,35 @@ void PutVal(void *va, void *val, int size) {
        than one page. Therefore, you may have to find multiple pages using Translate()
        function.*/
 
+    /*
     int remainingBits = size;
     char *data = (char*)val;
+    //printf("DOING PUTVAL() ON %d\n", *data);
+
+
+    for(int i = 0; remainingBits > 0; i++)
+    {
+        // Get a pointer to the physical memory. We dereference the pointer given to get 
+        // the unsigned long, then cast that to a char* so we can reference the physical memory
+        void *physAddr = (void*)(*Translate(pageDir, va + (i << numOffsetBits)));
+        printf("DOING PUTVAL AT PHYS ADDRESS %x\n", physAddr);
+
+        // Determine how many bits we are copying
+        int bitsToCopy = min(remainingBits, PGSIZE);
+        remainingBits -= bitsToCopy;
+
+
+        // copy the bits over to memory
+        strncpy(physAddr, data, bitsToCopy);
+
+        // increment data so we copy new data next time
+        data += bitsToCopy;
+    }
+    */
+
+    int remainingBits = size;
+    char *data = (char*)val;
+    printf("DOING PUTVAL() ON %d\n", *data);
 
 
     for(int i = 0; remainingBits > 0; i++)
@@ -556,12 +600,20 @@ void PutVal(void *va, void *val, int size) {
         int bitsToCopy = min(remainingBits, PGSIZE);
         remainingBits -= bitsToCopy;
 
+        //! add offset bits to phys address
+        unsigned long offsetMask = pow(2, numOffsetBits) - 1;
+        unsigned long numOffsetBytes = (unsigned long)va & offsetMask;
+        char* physAddrWithOffset = (char*)((unsigned long)physAddr + numOffsetBytes);
+
+        printf("DOING PUTVAL AT PHYS ADDRESS %x\n", (unsigned long)physAddrWithOffset);
+
         // copy the bits over to memory
-        strncpy(physAddr, data, bitsToCopy);
+        strncpy(physAddrWithOffset, data, bitsToCopy);
 
         // increment data so we copy new data next time
         data += bitsToCopy;
     }
+    
 }
 
 
@@ -585,8 +637,13 @@ void GetVal(void *va, void *val, int size) {
         int bitsToCopy = min(remainingBits, PGSIZE);
         remainingBits -= bitsToCopy;
 
+        //! add offset bits to phys address
+        unsigned long offsetMask = pow(2, numOffsetBits) - 1;
+        unsigned long numOffsetBytes = (unsigned long)va & offsetMask;
+        char* physAddrWithOffset = (char*)((unsigned long)physAddr + numOffsetBytes);
+
         // copy the bits over from memory
-        strncpy(data, physAddr, bitsToCopy);
+        strncpy(data, physAddrWithOffset, bitsToCopy);
 
         // increment data so we copy new data next time
         data += bitsToCopy;
