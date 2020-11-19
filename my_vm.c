@@ -245,7 +245,9 @@ pte_t * Translate(pde_t *pgdir, void *va) {
 
     //* first check TLB for virtual -> physical mapping. if not found, then continue on and find in page table
     if(DEBUG) puts("about to check tlb");
-    pte_t *tlb_check = check_TLB(va);
+    void *page = (unsigned long)va >> numOffsetBits;
+    page = (unsigned long)page << numOffsetBits;
+    pte_t *tlb_check = check_TLB(page);
     if(DEBUG) puts("here");
     if(tlb_check != NULL){
         //return tlb_check;
