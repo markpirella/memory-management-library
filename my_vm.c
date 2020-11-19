@@ -19,6 +19,9 @@ int numPageDirEntries = 0; // stores the number of page dir entries for easy tra
 
 int initialized = 0; // stores value representing whether or not physical memory has been initialized yet
 
+unsigned int num_tlb_checks = 0; // stores the number of times the TLB is checked for an address mapping
+unsigned int num_tlb_misses = 0; // stores the number of times the TLB checks encounter a miss
+
 /*
 int main()
 {
