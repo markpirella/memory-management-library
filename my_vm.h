@@ -8,7 +8,7 @@
 
 //Assume the address space is 32 bits, so the max memory size is 4GB
 //Page size is 4KB
-
+#define DEBUG 0
 //Add any important includes here which you may need
 
 #define PGSIZE 4096 // 2^12
@@ -32,14 +32,24 @@ typedef pte_t *pde_t;
 
 #define TLB_SIZE 120
 
+typedef struct tlb_entry {
+    void *va; // virtual address
+    void *pa; // physical address
+}tlb_entry;
+
 //Structure to represents TLB
-struct tlb {
+typedef struct tlb {
 
     //Assume your TLB is a direct mapped TLB of TBL_SIZE (entries)
     // You must also define wth TBL_SIZE in this file.
     //Assume each bucket to be 4 bytes
-};
-struct tlb tlb_store;
+    
+    struct tlb *next;
+    struct tlb *prev;
+
+    struct tlb_entry *entry;
+
+} tlb;
 
 
 void SetPhysicalMem();
