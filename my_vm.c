@@ -19,6 +19,8 @@ int numPageDirEntries = 0; // stores the number of page dir entries for easy tra
 
 int initialized = 0; // stores value representing whether or not physical memory has been initialized yet
 
+tlb *tlb_head = NULL;
+tlb *tlb_tail = NULL;
 /*
 int main()
 {
@@ -30,7 +32,7 @@ int main()
     pageDir = malloc(sizeof(pde_t)*(int)pow(2, numOuterIndexBits));
     
     PageMap(pageDir, va, pa);
-    printf("HELLO WORLD!\n");
+    if(DEBUG) printf("HELLO WORLD!\n");
 }
 */
 /*
@@ -44,11 +46,11 @@ void SetPhysicalMem() {
 
     // allocate physical memory and set the void pointer physMem to the start of the physical memory
     physMem = malloc(MEMSIZE);
-    printf("PHYSICAL MEMORY STARTS AT ADDRESS: %x\n", physMem);
+    if(DEBUG) printf("PHYSICAL MEMORY STARTS AT ADDRESS: %lx\n", (long unsigned int)physMem);
     // store appropriate number of virtual pages
     numVirtPages = MAX_MEMSIZE / PGSIZE;
 
-    printf("numvirtpages: %d\n", numVirtPages);
+    if(DEBUG) printf("numvirtpages: %d\n", numVirtPages);
 
     // store appropriate number of physical pages
     numPhysPages = MEMSIZE / PGSIZE;
@@ -71,7 +73,7 @@ void SetPhysicalMem() {
         bitmapLength++;
     }
 
-    printf("virtual bitmap length: %d\n", bitmapLength);
+    if(DEBUG) printf("virtual bitmap length: %d\n", bitmapLength);
 
     // allocate and initialize virtual bitmap
     int temp[bitmapLength];
@@ -88,7 +90,7 @@ void SetPhysicalMem() {
         bitmapLength++;
     }
 
-    printf("physical bitmap length: %d\n", bitmapLength);
+    if(DEBUG) printf("physical bitmap length: %d\n", bitmapLength);
 
     // allocate and initialize physical bitmap
     int temp2[bitmapLength];
@@ -103,23 +105,9 @@ void SetPhysicalMem() {
     pageDir = temp3;
     memset(pageDir, 0, numPageDirEntries*sizeof(pde_t));
 
-    printf("number of page directory entries: %d\n", numPageDirEntries);
+    if(DEBUG) printf("number of page directory entries: %d\n", numPageDirEntries);
 
-    //printf("outer bits: %d, inner bits: %d, offset bits: %d\n", numOuterIndexBits, numInnerIndexBits, numOffsetBits);
-
-    /* bitmap debugging/testing
-    SetBit(physBitmap+1, 0);
-    SetBit(physBitmap+1, 1);
-    SetBit(physBitmap+1, 2);
-    SetBit(physBitmap+1, 3);
-    printf("%x\n", physBitmap[1] & 0xf);
-
-    /*
-    printf("physical bitarray length (should be 8192): %d\n", bitmapLength);
-    printf("first elements in physBitmap: %x\n", physBitmap[1]);
-    */
-
-    
+    //if(DEBUG) printf("outer bits: %d, inner bits: %d, offset bits: %d\n", numOuterIndexBits, numInnerIndexBits, numOffsetBits);
 
     // set initialized flag to 1
     initialized = 1;
@@ -132,8 +120,9 @@ void SetPhysicalMem() {
 int
 add_TLB(void *va, void *pa)
 {
-
+    //! Alec
     /*Part 2 HINT: Add a virtual to physical page translation to the TLB */
+
 
     return -1;
 }
@@ -146,7 +135,7 @@ add_TLB(void *va, void *pa)
  */
 pte_t *
 check_TLB(void *va) {
-
+    //! Alec
     /* Part 2: TLB lookup code here */
 
 }
@@ -159,6 +148,7 @@ check_TLB(void *va) {
 void
 print_TLB_missrate()
 {
+    //! Mark
     double miss_rate = 0;
 
     /*Part 2 Code here to calculate and print the TLB miss rate*/
@@ -182,20 +172,7 @@ pte_t * Translate(pde_t *pgdir, void *va) {
     //2nd-level-page table index using the virtual address.  Using the page
     //directory index and page table index get the physical address
 
-    /*
-    int pdir_index = -1;
-    int i;
-    for(i = 0; i < numPageDirEntries; i++){ // loop through page directory until you find desired entry (pgdir)
-        if(pageDir[i] == pgdir){
-            pdir_index = i;
-            break;
-        }
-    }
-    if(pdir_index < 0 ){ // pde not found, so return null
-        return NULL;
-    }
-    otherwise, page directory was found so continue on
-    */ //i dont think the above is right, misread the instructions ^^^^^^^^
+    //i dont think the above is right, misread the instructions ^^^^^^^^
 
     unsigned long pDirMask = 0;
     int i;
@@ -207,7 +184,7 @@ pte_t * Translate(pde_t *pgdir, void *va) {
     for(i = numOffsetBits; i < ADDRESS_BIT_LENGTH - numOuterIndexBits; i++){
         pTableMask |= (0x1 << i);
     }
-    ////printf("pTableMask: %x\n", pTableMask);
+    ////if(DEBUG) printf("pTableMask: %x\n", pTableMask);
     
     // grab outer index bits in address using pDirMask and store as page_directory_index
     unsigned long pdir_index = ((unsigned long)va & pDirMask) >> (numOffsetBits + numInnerIndexBits);
@@ -287,28 +264,6 @@ void *get_next_avail(int num_pages) {
 **** FUNCTION ABOVE SPLIT INTO THE TWO FUNCTIONS BELOW, AS SUGGESTED ****
 */
 
-/*
-void *createAddressFromBitmapIndex(int index){
-    void* address;
-
-    int pDirMask = 0;
-    int i;
-    for(i = numOffsetBits + numInnerIndexBits; i < ADDRESS_BIT_LENGTH; i++){
-        pDirMask |= (0x1 << i);
-    }
-
-    int pTableMask = 0;
-    for(i = numOffsetBits; i < ADDRESS_BIT_LENGTH - numOuterIndexBits; i++){
-        pTableMask |= (0x1 << i);
-    }
-    
-    // grab outer index bits in address using pDirMask and store as page_directory_index
-    int pdir_index = ((int)va & pDirMask) >> (numOffsetBits + numInnerIndexBits);
-
-    // grab inner index bits in address using pTableMask and store as page_table_index
-    int ptable_index = ((int)va & pTableMask) >> numOffsetBits;
-}
-*/
 
 /*
 Function that gets the next available virtual page(s) (if multiple pages, will return address of the first one)
@@ -317,28 +272,26 @@ void *get_next_avail_virt(int num_pages_to_find) {
 
     //! Mark
 
-    printf("%d%d%d\n", virtBitmap[0], virtBitmap[1], virtBitmap[2]);
-
     //Use virtual address bitmap to find the next free *virtual* pages
 
     int i;
     for(i = 0; i < numVirtPages; i++){
         if(TestBit(virtBitmap, i) == 0){ // found a 0
-            printf("found a 0 at %d\n", i);
+            if(DEBUG) printf("found a 0 at %d\n", i);
             // now make sure there are enough contiguous 0's
             int j;
             int foundEnoughZeroes = 1;
             for(j = 0; j < num_pages_to_find-1; j++){
                 i++;
                 if(i > numVirtPages || TestBit(virtBitmap, i) != 0){ // not enough contiguous 0's or reached end of virtual bitmap
-                printf("did NOT find a 0 at %d\n", j);
+                if(DEBUG) printf("did NOT find a 0 at %d\n", j);
                     foundEnoughZeroes = 0;
                     break;
                 }
-                printf("found a 0 at %d\n", j);
+                if(DEBUG) printf("found a 0 at %d\n", j);
             }
             if(foundEnoughZeroes){
-                puts("found enough 0's");
+                if(DEBUG) puts("found enough 0's");
                 // set bits to 1
                 int k;
                 for(k = 0; k <= j; k++){
@@ -405,35 +358,35 @@ void *myalloc(unsigned int num_bytes) {
 
     // initialize physical memory using SetPhysicalMem() if this is first user call to myalloc()
     if(initialized == 0){
-        puts("INITIALIZING");
+        if(DEBUG) puts("INITIALIZING");
         SetPhysicalMem();
         initialized = 1;
     }
-    puts("CALLED MYALLOC");
+    if(DEBUG) puts("CALLED MYALLOC");
 
     // calculate number of pages that need to be allocated
     unsigned long numPagesToAllocate = ceil((double)num_bytes / PGSIZE);
-    printf("num pages to allocate: %d\n", numPagesToAllocate);
+    if(DEBUG) printf("num pages to allocate: %lu \n", numPagesToAllocate);
 
     // find next available virtual pages, and check for failure. (bits in bitmap will be set by get_next_avail_virt function, so no need to worry about that)
     void *firstVirtPagePtr = get_next_avail_virt(numPagesToAllocate);
     if(firstVirtPagePtr == NULL){
-        puts("myalloc failed - no virtual space left");
+        if(DEBUG) puts("myalloc failed - no virtual space left");
         return NULL;
     }
 
     // find next available physical pages, and check for failure. (bits in bitmap will be set by get_next_avail_phys function, so no need to worry about that)
     unsigned long *physPages = get_next_avail_phys(numPagesToAllocate);
     if(physPages == NULL){
-        puts("myalloc failed - no physical space left");
+        if(DEBUG) puts("myalloc failed - no physical space left");
         return NULL;
     }
 
     int h;
     for(h = 0; h < numPagesToAllocate; h++){
-        printf("****************phys address: %x\t", physPages[h]);
+        if(DEBUG) printf("****************phys address: %lx\t", physPages[h]);
     }
-    puts("");
+    if(DEBUG) puts("");
 
     // now insert virtual -> physical mapping(s) into page table
     int i;
@@ -441,29 +394,14 @@ void *myalloc(unsigned int num_bytes) {
 
         void *virtAddress = firstVirtPagePtr;
         virtAddress += (i << numOffsetBits);
-        void *physAddress = (unsigned long)physMem + physPages[i];
+        void *physAddress = (void*)((unsigned long)physMem + physPages[i]);
         PageMap(pageDir, virtAddress, physAddress);
-        printf("****INSERTING INTO PAGE TABLE -> phys address: %x, at virt address: %x\n", physAddress, virtAddress);
-        printf("\n-----------------\nPAGE DIR LOOKS LIKE:\n");
+        if(DEBUG) printf("****INSERTING INTO PAGE TABLE -> phys address: %x, at virt address: %x\n", (unsigned int)physAddress, (unsigned int)virtAddress);
+        if(DEBUG) printf("\n-----------------\nPAGE DIR LOOKS LIKE:\n");
         int y;
         for(y = 0; y < 5; y++){
-            printf("index: %d phys address: %x\n", y, pageDir[0][y]);
+            if(DEBUG) printf("index: %d phys address: %x\n", y, (unsigned int)pageDir[0][y]);
         }
-
-        /*
-        // cast the virtual address and remove the offset bits, since we are only accessing the page, not its contents
-        unsigned long virtAddress = ((unsigned long)firstVirtPagePtr) >> numOffsetBits;
-
-        // have to get all virtual pages in sequence, so add i to virtAddress (to access all sequential page table entries necessary)
-        virtAddress += i;
-
-        // get the last numInnerIndexBits bits in the virtual address, since offset bits have been truncated
-        unsigned long pageTableMask = (unsigned long)pow(2, numInnerIndexBits) - 1;
-        unsigned long pageTableIndex = virtAddress & pageTableMask;
-
-        // truncate the page table bits and set the remaining bits as pageDirIndex
-        unsigned long pageDirIndex = virtAddress >> numInnerIndexBits;
-        */
 
     }
 
@@ -486,14 +424,14 @@ void myfree(void *va, int size) {
     // Only free if the memory from "va" to va+size is valid
     
     int numPages;
-    unsigned long pageIndex, *pageDirBitArray, *pageTableBitArray;
+    unsigned long pageIndex, *pageDirIndexArray, *pageTableIndexArray;
     // Finds the number of pages we need to free
     //!numPages = max(1, ceil((double)size/numPages)); <- possible issue - size/numPages but numPages is not initialized... instead size/PGSIZE ?
     //numPages = max(1, ceil((double)size/numPages));
     numPages = max(1, ceil((double)size/PGSIZE));
-    printf("NUM PAGES IN FREE FUNCTION: %d\n", numPages);
-    pageDirBitArray = malloc(numPages * sizeof(unsigned long));
-    pageTableBitArray = malloc(numPages * sizeof(unsigned long));
+    if(DEBUG) printf("NUM PAGES IN FREE FUNCTION: %d\n", numPages);
+    pageDirIndexArray = malloc(numPages * sizeof(unsigned long));
+    pageTableIndexArray = malloc(numPages * sizeof(unsigned long));
 
     // Truncate offset bits of the virtual address
     pageIndex = (unsigned long)va >> numOffsetBits;
@@ -510,19 +448,19 @@ void myfree(void *va, int size) {
         // gets the remaining bits
         pageDirBits = (pageIndex + i) >> numInnerIndexBits;
 
-        if(pageDir[pageDirBits] == NULL || pageDir[pageDirBits][pageTableBits] == NULL)
+        if(pageDir[pageDirBits] == NULL || pageDir[pageDirBits][pageTableBits] == 0)
         {
-            printf("SEGMENTATION FAULT: cannot free memory which has not been allocated first\n");
-            free(pageDirBitArray);
-            free(pageTableBitArray);
+            if(DEBUG) printf("SEGMENTATION FAULT: cannot free memory which has not been allocated first\n");
+            free(pageDirIndexArray);
+            free(pageTableIndexArray);
             return;
         }
 
         // We need to validate that all the memory locations are valid before we free,
         // so we store the indices in another array for later.
         // Later we actually perform the freeing actions
-        pageDirBitArray  [i] = pageDirBits;
-        pageTableBitArray[i] = pageTableBits;
+        pageDirIndexArray  [i] = pageDirBits;
+        pageTableIndexArray[i] = pageTableBits;
     }
 
     for(int i = 0; i < numPages; i++)
@@ -530,10 +468,10 @@ void myfree(void *va, int size) {
         unsigned long virtBitmapIndex, physBitmapIndex, physAddr;
 
         // restores the virtual address index
-        virtBitmapIndex = (pageDirBitArray[i] << numInnerIndexBits) + pageTableBitArray[i];
+        virtBitmapIndex = (pageDirIndexArray[i] << numInnerIndexBits) + pageTableIndexArray[i];
 
         // retrieves the physical address from the page directory
-        physAddr = pageDir[pageDirBitArray[i]][pageTableBitArray[i]];
+        physAddr = pageDir[pageDirIndexArray[i]][pageTableIndexArray[i]];
 
         // truncates offset bits to get the bitmap index;
         physBitmapIndex = physAddr >> numOffsetBits;
@@ -541,10 +479,10 @@ void myfree(void *va, int size) {
         // Frees the memory
         ClearBit(virtBitmap, virtBitmapIndex);
         ClearBit(physBitmap, physBitmapIndex);
-        pageDir[pageDirBitArray[i]][pageTableBitArray[i]] = NULL;
+        pageDir[pageDirIndexArray[i]][pageTableIndexArray[i]] = 0;
     }
-    free(pageDirBitArray);
-    free(pageTableBitArray);
+    free(pageDirIndexArray);
+    free(pageTableIndexArray);
 }
 
 
@@ -559,35 +497,9 @@ void PutVal(void *va, void *val, int size) {
        than one page. Therefore, you may have to find multiple pages using Translate()
        function.*/
 
-    /*
     int remainingBits = size;
     char *data = (char*)val;
-    //printf("DOING PUTVAL() ON %d\n", *data);
-
-
-    for(int i = 0; remainingBits > 0; i++)
-    {
-        // Get a pointer to the physical memory. We dereference the pointer given to get 
-        // the unsigned long, then cast that to a char* so we can reference the physical memory
-        void *physAddr = (void*)(*Translate(pageDir, va + (i << numOffsetBits)));
-        printf("DOING PUTVAL AT PHYS ADDRESS %x\n", physAddr);
-
-        // Determine how many bits we are copying
-        int bitsToCopy = min(remainingBits, PGSIZE);
-        remainingBits -= bitsToCopy;
-
-
-        // copy the bits over to memory
-        strncpy(physAddr, data, bitsToCopy);
-
-        // increment data so we copy new data next time
-        data += bitsToCopy;
-    }
-    */
-
-    int remainingBits = size;
-    char *data = (char*)val;
-    printf("DOING PUTVAL() ON %d\n", *data);
+    if(DEBUG) printf("DOING PUTVAL() ON %d\n", *data);
 
 
     for(int i = 0; remainingBits > 0; i++)
@@ -605,7 +517,7 @@ void PutVal(void *va, void *val, int size) {
         unsigned long numOffsetBytes = (unsigned long)va & offsetMask;
         char* physAddrWithOffset = (char*)((unsigned long)physAddr + numOffsetBytes);
 
-        printf("DOING PUTVAL AT PHYS ADDRESS %x\n", (unsigned long)physAddrWithOffset);
+        if(DEBUG) printf("DOING PUTVAL AT PHYS ADDRESS %x\n", (unsigned int)physAddrWithOffset);
 
         // copy the bits over to memory
         strncpy(physAddrWithOffset, data, bitsToCopy);
@@ -666,12 +578,20 @@ void MatMult(void *mat1, void *mat2, int size, void *answer) {
     getting the values from two matrices, you will perform multiplication and
     store the result to the "answer array"*/
 
-    int i, j;
+    int i, j, k;
     for(i = 0; i < size; i++)
     {
         for(j = 0; j < size; j++)
         {
-
+            int sum = 0;
+            for(k = 0; k < size; k++)
+            {
+                int mat1Value, mat2Value;
+                GetVal(mat1 + sizeof(int) * (i * size + k), &mat1Value, sizeof(int));
+                GetVal(mat2 + sizeof(int) * (k * size + j), &mat2Value, sizeof(int));
+                sum += mat1Value * mat2Value;
+            }
+            PutVal(answer + sizeof(int)*(i*size + j), &sum, sizeof(int));
         }
     }
 }
