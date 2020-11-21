@@ -25,7 +25,7 @@
             "miDebuggerPath": "/usr/bin/gdb"
         },
         {
-            "name": "make something",
+            "name": "run my_vm.c",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/my_vm",
@@ -42,6 +42,26 @@
                 }
             ],
             "preLaunchTask": "makesomething",
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
+            "name": "run benchmark",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/benchmark/test",
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "benchmark",
             "miDebuggerPath": "/usr/bin/gdb"
         }
     ]
