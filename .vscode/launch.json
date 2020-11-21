@@ -8,7 +8,7 @@
             "name": "make and run test",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/test",
+            "program": "${workspaceFolder}/benchmark/test",
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
