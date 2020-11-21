@@ -32,7 +32,7 @@ typedef unsigned long pte_t;
 typedef pte_t *pde_t;
 
 
-#define TLB_SIZE 120
+#define TLB_SIZE 5
 
 typedef struct tlb_entry {
     void *va; // virtual address
