@@ -12,9 +12,9 @@ void *physMem = NULL; // void pointer to point to the start of allocated physica
 size_t numVirtPages = 0; // stores total number of virtual pages
 size_t numPhysPages = 0; // stores total number of physical pages
 
-int numOffsetBits = 0; // stores the number of bits used to calculate the offset in virtual addresses (ex. bits 11:0 for PGSIZE = 4096)
-int numOuterIndexBits = 0; // stores the number of bits used to calculate the outer index (index of page dir) in virtual addresses (ex. bits 21:12 for PGSIZE = 4096)
-int numInnerIndexBits = 0; // stores the number of bits used to calculate the inner index (index of page table) in virtual addresses (ex. bits 31:22 for PGSIZE = 4096)
+int numOffsetBits = 0; // stores the number of bits used to calculate the offset in virtual addresses (ex. bits 11:0 for(PGSIZE)= 4096)
+int numOuterIndexBits = 0; // stores the number of bits used to calculate the outer index (index of page dir) in virtual addresses (ex. bits 21:12 for(PGSIZE)= 4096)
+int numInnerIndexBits = 0; // stores the number of bits used to calculate the inner index (index of page table) in virtual addresses (ex. bits 31:22 for(PGSIZE)= 4096)
 int numPageDirEntries = 0; // stores the number of page dir entries for easy traversal through array
 
 int initialized = 0; // stores value representing whether or not physical memory has been initialized yet
@@ -52,20 +52,20 @@ void SetPhysicalMem() {
     physMem = malloc(MEMSIZE);
     if(DEBUG) printf("PHYSICAL MEMORY STARTS AT ADDRESS: %lx\n", (long unsigned int)physMem);
     // store appropriate number of virtual pages
-    numVirtPages = MAX_MEMSIZE / PGSIZE;
+    numVirtPages =(MAX_MEMSIZE) / (PGSIZE);
 
     if(DEBUG) printf("numvirtpages: %d\n", numVirtPages);
 
     // store appropriate number of physical pages
-    numPhysPages = MEMSIZE / PGSIZE;
+    numPhysPages = (MEMSIZE) / (PGSIZE);
 
-    // set number of offset bits to log-base-2 of PGSIZE (ex. numOffsetBits = 12 for PGSIZE = 4096)
+    // set number of offset bits to log-base-2 of(PGSIZE)(ex. numOffsetBits = 12 for(PGSIZE)= 4096)
     numOffsetBits = log2(PGSIZE);
 
-    // set number of outer index bits to half of bitspace remaining for use in the virtual address (ex. 10 for PGSIZE = 4096)
+    // set number of outer index bits to half of bitspace remaining for use in the virtual address (ex. 10 for(PGSIZE)= 4096)
     numOuterIndexBits = (ADDRESS_BIT_LENGTH - numOffsetBits) / 2;
 
-    // set number of outer index bits to the number of bits remaining for use in the virtual address (ex. 10 for PGSIZE = 4096)
+    // set number of outer index bits to the number of bits remaining for use in the virtual address (ex. 10 for(PGSIZE)= 4096)
     numInnerIndexBits = ADDRESS_BIT_LENGTH - (numOffsetBits + numOuterIndexBits);
 
     // store number of page dir entries based on number of outer index bits
@@ -102,7 +102,7 @@ void SetPhysicalMem() {
     for(i = 0; i < bitmapLength; i++){
         physBitmap[i] = 0;
     }
-    physBitmap[0] = 1 << (sizeof(int)*8 - 1);
+    SetBit(physBitmap, 0);
 
     // allocate and initialize page directory
 
@@ -149,39 +149,12 @@ add_TLB(void *va, void *pa)
     newEntry->next = tlb_head;
     tlb_head->prev = newEntry;
     tlb_head = newEntry;
-    // ensure tlb_tail gets moved to back of list if it isn't there already
-    if(tlb_tail->next != NULL){
-        tlb *ptr = tlb_head;
-        while(ptr != NULL)
-        {
-            if(ptr->next == NULL){
-                tlb_tail = ptr;
-                break;
-            }
-            ptr = ptr->next;
-        }
-    }
     if(tlb_count > TLB_SIZE)
     {
-        //puts("YUP HERE");
-        //printf("%x\n", tlb_tail->prev);
-
-        // debugging
-        /*
-        tlb *ptr = tlb_head;
-        while(ptr != NULL)
-        {
-            printf("va: %x, pa: %x\n", tlb_tail->entry->va, tlb_tail->entry->pa);
-            ptr = ptr->next;
-        }
-        */
-        puts("EVICTING FROM TLB");
         tlb_tail->prev->next = NULL;
-        //puts("GOT PAST");
         tlb_count--;
         tlb *temp = tlb_tail;
         tlb_tail = tlb_tail->prev;
-
         free(temp->entry);
         free(temp);
     }
@@ -228,7 +201,6 @@ check_TLB(void *va) {
     {
         if(ptr->entry->va == va)
         {
-            //if(DEBUG) printf("***FOUND ADDRESS %x from TLB\n", ptr->entry->pa);
             if(DEBUG) printf("***FOUND ADDRESS %lx from TLB\n", (unsigned long)ptr->entry->pa);
             return (pte_t *)(&ptr->entry->pa);
         }
@@ -280,7 +252,7 @@ pte_t * Translate(pde_t *pgdir, void *va) {
     if(tlb_check != NULL){
         return tlb_check;
     }
-    //if(DEBUG) puts("checked tlb");
+    if(DEBUG) puts("checked tlb");
 
     unsigned long pDirMask = 0;
     int i;
@@ -433,7 +405,7 @@ unsigned long *get_next_avail_phys(int num_pages_to_find) {
     int i;
     for(i = 0; i < numPhysPages && numPagesFound < num_pages_to_find; i++){
         if(TestBit(physBitmap, i) == 0){
-            physPages[numPagesFound] = ((unsigned long)i)*PGSIZE;
+            physPages[numPagesFound] = ((unsigned long)i) * (PGSIZE);
             numPagesFound++;
         }
     }
@@ -443,7 +415,7 @@ unsigned long *get_next_avail_phys(int num_pages_to_find) {
     // set the bits to 1
     int j;
     for(j = 0; j < num_pages_to_find; j++){
-        SetBit(physBitmap, physPages[j]/PGSIZE);
+        SetBit(physBitmap, physPages[j]/(PGSIZE));
     }
     return physPages;
 }
@@ -542,7 +514,7 @@ void myfree(void *va, int size) {
     int numPages;
     unsigned long pageIndex, *pageDirIndexArray, *pageTableIndexArray;
     // Finds the number of pages we need to free
-    //!numPages = max(1, ceil((double)size/numPages)); <- possible issue - size/numPages but numPages is not initialized... instead size/PGSIZE ?
+    //!numPages = max(1, ceil((double)size/numPages)); <- possible issue - size/numPages but numPages is not initialized... instead size(PGSIZE)?
     //numPages = max(1, ceil((double)size/numPages));
     numPages = max(1, ceil((double)size/PGSIZE));
     if(DEBUG) printf("NUM PAGES IN FREE FUNCTION: %d\n", numPages);
@@ -590,7 +562,7 @@ void myfree(void *va, int size) {
         physAddr = pageDir[pageDirIndexArray[i]][pageTableIndexArray[i]];
 
         // truncates offset bits to get the bitmap index;
-        physBitmapIndex = physAddr >> numOffsetBits - (unsigned long)physMem;
+        physBitmapIndex = (physAddr - (unsigned long)physMem) >> numOffsetBits;
 
         // Frees the memory
         ClearBit(virtBitmap, virtBitmapIndex);
@@ -615,7 +587,7 @@ void PutVal(void *va, void *val, int size) {
 
     int remainingBits = size;
     char *data = (char*)val;
-    //if(DEBUG) printf("DOING PUTVAL() ON %d\n", *data);
+    if(DEBUG) printf("DOING PUTVAL() ON %d\n", *data);
 
 
     for(int i = 0; remainingBits > 0; i++)
@@ -633,7 +605,7 @@ void PutVal(void *va, void *val, int size) {
         unsigned long numOffsetBytes = (unsigned long)va & offsetMask;
         char* physAddrWithOffset = (char*)((unsigned long)physAddr + numOffsetBytes);
 
-        //if(DEBUG) printf("DOING PUTVAL AT PHYS ADDRESS %x\n", (unsigned int)physAddrWithOffset);
+        if(DEBUG) printf("DOING PUTVAL AT PHYS ADDRESS %x\n", (unsigned int)physAddrWithOffset);
 
         // copy the bits over to memory
         strncpy(physAddrWithOffset, data, bitsToCopy);

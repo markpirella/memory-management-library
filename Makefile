@@ -16,15 +16,15 @@ my_vm.o: my_vm.h
 test: 
 	$(CC) -g -m32 test.c -o test -L. -lmy_vm -lm
 
-runbenchmark: clean my_vm.a
-	gcc benchmark/test.c -L./ -lmy_vm -m32 -lm -o benchmark/test
+benchmark: clean my_vm.a
+	gcc benchmark/test.c -g -L./ -lmy_vm -m32 -lm -o benchmark/test
+	
+
+runbenchmark: benchmark
 	./benchmark/test
 
 clean:
-	rm -rf *.o *.a
-	rm -f test
-	rm -f my_vm
-	rm -f benchmark/test
+	rm -rf *.o *.a test my_vm benchmark/test
 
 something:
 	$(CC) -g -m32 -o my_vm my_vm.c -lm

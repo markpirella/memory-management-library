@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "../my_vm.h"
 
-#define SIZE 5
+#define SIZE 10
 
 int main() {
 
@@ -14,10 +14,10 @@ int main() {
     */
 
     printf("Allocating three arrays of 400 bytes\n");
-    void *a = myalloc(100*4);
+    void *a = myalloc(400);
     int old_a = (int)a;
-    void *b = myalloc(100*4);
-    void *c = myalloc(100*4);
+    void *b = myalloc(400);
+    void *c = myalloc(400);
     int x = 1;
     int y, z;
     int i =0, j=0;
@@ -64,12 +64,12 @@ int main() {
         printf("\n");
     }
     printf("Freeing the allocations!\n");
-    myfree(a, 100*4);
-    myfree(b, 100*4);
-    myfree(c, 100*4);
+    myfree(a, 400);
+    myfree(b, 400);
+    myfree(c, 400);
 
     printf("Checking if allocations were freed!\n");
-    a = myalloc(100*4);
+    a = myalloc(400);
     if ((int)a == old_a)
         printf("free function works\n");
     else

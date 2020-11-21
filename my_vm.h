@@ -13,7 +13,7 @@
 
 //Add any important includes here which you may need
 
-#define PGSIZE 4096 // 2^12
+#define PGSIZE 1024*1024 // 2^12 --> 4096
 
 // Maximum size of your memory
 #define MAX_MEMSIZE 4ULL*1024*1024*1024 //4GB
@@ -32,7 +32,7 @@ typedef unsigned long pte_t;
 typedef pte_t *pde_t;
 
 
-#define TLB_SIZE 5
+#define TLB_SIZE 120
 
 typedef struct tlb_entry {
     void *va; // virtual address
