@@ -7,8 +7,10 @@
 #include <math.h>
 
 //Assume the address space is 32 bits, so the max memory size is 4GB
+
 //Page size is 4KB
 #define DEBUG 0
+
 //Add any important includes here which you may need
 
 #define PGSIZE 4096 // 2^12
