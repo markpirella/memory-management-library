@@ -226,6 +226,7 @@ check_TLB(void *va) {
         if(ptr->entry->va == va)
         {
             //if(DEBUG) printf("***FOUND ADDRESS %x from TLB\n", ptr->entry->pa);
+            if(DEBUG) printf("***FOUND ADDRESS %lx from TLB\n", (unsigned long)ptr->entry->pa);
             return (pte_t *)(&ptr->entry->pa);
         }
         ptr = ptr->next;
@@ -270,11 +271,9 @@ pte_t * Translate(pde_t *pgdir, void *va) {
     //directory index and page table index get the physical address
 
     //* first check TLB for virtual -> physical mapping. if not found, then continue on and find in page table
-    //if(DEBUG) puts("about to check tlb");
-    void *page = (unsigned long)va >> numOffsetBits;
-    page = (unsigned long)page << numOffsetBits;
-    pte_t *tlb_check = check_TLB(page);
-    //if(DEBUG) puts("here");
+    if(DEBUG) puts("about to check tlb");
+    pte_t *tlb_check = check_TLB((void*)((unsigned long)va & ~((1 << numOffsetBits) - 1)));
+    if(DEBUG) puts("here");
     if(tlb_check != NULL){
         return tlb_check;
     }
