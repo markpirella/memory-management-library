@@ -153,8 +153,11 @@ add_TLB(void *va, void *pa)
     {
         tlb_tail->prev->next = NULL;
         tlb_count--;
-        free(tlb_tail->entry);
-        free(tlb_tail);
+        tlb *temp = tlb_tail;
+        tlb_tail = tlb_tail->prev;
+
+        free(temp->entry);
+        free(temp);
     }
 
     return -1;
