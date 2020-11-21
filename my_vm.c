@@ -149,9 +149,35 @@ add_TLB(void *va, void *pa)
     newEntry->next = tlb_head;
     tlb_head->prev = newEntry;
     tlb_head = newEntry;
+    // ensure tlb_tail gets moved to back of list if it isn't there already
+    if(tlb_tail->next != NULL){
+        tlb *ptr = tlb_head;
+        while(ptr != NULL)
+        {
+            if(ptr->next == NULL){
+                tlb_tail = ptr;
+                break;
+            }
+            ptr = ptr->next;
+        }
+    }
     if(tlb_count > TLB_SIZE)
     {
+        //puts("YUP HERE");
+        //printf("%x\n", tlb_tail->prev);
+
+        // debugging
+        /*
+        tlb *ptr = tlb_head;
+        while(ptr != NULL)
+        {
+            printf("va: %x, pa: %x\n", tlb_tail->entry->va, tlb_tail->entry->pa);
+            ptr = ptr->next;
+        }
+        */
+        puts("EVICTING FROM TLB");
         tlb_tail->prev->next = NULL;
+        //puts("GOT PAST");
         tlb_count--;
         free(tlb_tail->entry);
         free(tlb_tail);
@@ -199,8 +225,8 @@ check_TLB(void *va) {
     {
         if(ptr->entry->va == va)
         {
-            if(DEBUG) printf("***FOUND ADDRESS %x from TLB\n", ptr->entry->pa);
-            return (pte_t *)(ptr->entry->pa);
+            //if(DEBUG) printf("***FOUND ADDRESS %x from TLB\n", ptr->entry->pa);
+            return (pte_t *)(&ptr->entry->pa);
         }
         ptr = ptr->next;
     }
@@ -244,15 +270,15 @@ pte_t * Translate(pde_t *pgdir, void *va) {
     //directory index and page table index get the physical address
 
     //* first check TLB for virtual -> physical mapping. if not found, then continue on and find in page table
-    if(DEBUG) puts("about to check tlb");
+    //if(DEBUG) puts("about to check tlb");
     void *page = (unsigned long)va >> numOffsetBits;
     page = (unsigned long)page << numOffsetBits;
     pte_t *tlb_check = check_TLB(page);
-    if(DEBUG) puts("here");
+    //if(DEBUG) puts("here");
     if(tlb_check != NULL){
-        //return tlb_check;
+        return tlb_check;
     }
-    if(DEBUG) puts("checked tlb");
+    //if(DEBUG) puts("checked tlb");
 
     unsigned long pDirMask = 0;
     int i;
@@ -587,7 +613,7 @@ void PutVal(void *va, void *val, int size) {
 
     int remainingBits = size;
     char *data = (char*)val;
-    if(DEBUG) printf("DOING PUTVAL() ON %d\n", *data);
+    //if(DEBUG) printf("DOING PUTVAL() ON %d\n", *data);
 
 
     for(int i = 0; remainingBits > 0; i++)
@@ -605,7 +631,7 @@ void PutVal(void *va, void *val, int size) {
         unsigned long numOffsetBytes = (unsigned long)va & offsetMask;
         char* physAddrWithOffset = (char*)((unsigned long)physAddr + numOffsetBytes);
 
-        if(DEBUG) printf("DOING PUTVAL AT PHYS ADDRESS %x\n", (unsigned int)physAddrWithOffset);
+        //if(DEBUG) printf("DOING PUTVAL AT PHYS ADDRESS %x\n", (unsigned int)physAddrWithOffset);
 
         // copy the bits over to memory
         strncpy(physAddrWithOffset, data, bitsToCopy);
