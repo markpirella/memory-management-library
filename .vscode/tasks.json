@@ -17,6 +17,11 @@
             "type": "shell",
             "label": "makesomething",
             "command": "make clean;make something"
+        },
+        {
+            "type": "shell",
+            "label": "benchmark",
+            "command": "make benchmark"
         }
     ]
 }

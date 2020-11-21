@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "../my_vm.h"
 
-#define SIZE 50
+#define SIZE 5
 
 int main() {
 
