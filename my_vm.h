@@ -12,8 +12,7 @@
 #define DEBUG 0
 
 //Add any important includes here which you may need
-
-#define PGSIZE 1024*1024 // 2^12 --> 4096
+#define PGSIZE 4096 // 2^12 --> 4096
 
 // Maximum size of your memory
 #define MAX_MEMSIZE 4ULL*1024*1024*1024 //4GB
