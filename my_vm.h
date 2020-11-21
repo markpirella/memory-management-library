@@ -8,7 +8,7 @@
 
 //Assume the address space is 32 bits, so the max memory size is 4GB
 //Page size is 4KB
-#define DEBUG 1
+#define DEBUG 0
 //Add any important includes here which you may need
 
 #define PGSIZE 4096 // 2^12
@@ -30,7 +30,7 @@ typedef unsigned long pte_t;
 typedef pte_t *pde_t;
 
 
-#define TLB_SIZE 5
+#define TLB_SIZE 2
 
 typedef struct tlb_entry {
     void *va; // virtual address

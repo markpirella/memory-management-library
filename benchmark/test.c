@@ -14,10 +14,10 @@ int main() {
     */
 
     printf("Allocating three arrays of 400 bytes\n");
-    void *a = myalloc(100*400);
+    void *a = myalloc(100*4);
     int old_a = (int)a;
-    void *b = myalloc(100*400);
-    void *c = myalloc(100*400);
+    void *b = myalloc(100*4);
+    void *c = myalloc(100*4);
     int x = 1;
     int y, z;
     int i =0, j=0;
@@ -64,12 +64,12 @@ int main() {
         printf("\n");
     }
     printf("Freeing the allocations!\n");
-    myfree(a, 100*400);
-    myfree(b, 100*400);
-    myfree(c, 100*400);
+    myfree(a, 100*4);
+    myfree(b, 100*4);
+    myfree(c, 100*4);
 
     printf("Checking if allocations were freed!\n");
-    a = myalloc(100*400);
+    a = myalloc(100*4);
     if ((int)a == old_a)
         printf("free function works\n");
     else
