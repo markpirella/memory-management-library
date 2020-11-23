@@ -6,6 +6,7 @@ int *physBitmap;
 int *virtBitmap;
 
 pthread_mutex_t lock;
+pthread_mutex_t tlb_mutex;
 
 pde_t *pageDir = NULL; // pointer to page directory (array of page directory entries)
 
@@ -20,6 +21,7 @@ int numInnerIndexBits = 0; // stores the number of bits used to calculate the in
 int numPageDirEntries = 0; // stores the number of page dir entries for easy traversal through array
 
 int initialized = 0; // stores value representing whether or not physical memory has been initialized yet
+int initializing = 0;
 
 unsigned long long num_tlb_checks = 0; // stores the number of times the TLB is checked for an address mapping
 unsigned long long num_tlb_misses = 0; // stores the number of times the TLB checks encounter a miss
@@ -55,6 +57,7 @@ void SetPhysicalMem() {
     if(DEBUG) printf("PHYSICAL MEMORY STARTS AT ADDRESS: %lx\n", (long unsigned int)physMem);
 
     pthread_mutex_init(&lock, NULL);
+    pthread_mutex_init(&tlb_mutex, NULL);
 
     // store appropriate number of virtual pages
     numVirtPages =(MAX_MEMSIZE) / (PGSIZE);
@@ -133,6 +136,7 @@ add_TLB(void *va, void *pa)
     //! Alec
     /*Part 2 HINT: Add a virtual to physical page translation to the TLB */
 
+    pthread_mutex_lock(&tlb_mutex);
     // Initialize new tlb entry with va and pa
     tlb *newEntry = malloc(sizeof(tlb));
     memset(newEntry, 0, sizeof(tlb));
@@ -163,6 +167,7 @@ add_TLB(void *va, void *pa)
         free(temp->entry);
         free(temp);
     }
+    pthread_mutex_unlock(&tlb_mutex);
 
     return -1;
 }
@@ -170,6 +175,7 @@ add_TLB(void *va, void *pa)
 int remove_TLB(void *va)
 {
     //! Alec
+    pthread_mutex_lock(&tlb_mutex);
     tlb *ptr = tlb_head;
     while(ptr != NULL)
     {
@@ -186,6 +192,7 @@ int remove_TLB(void *va)
         }
         ptr = ptr->next;
     }
+    pthread_mutex_unlock(&tlb_mutex);
     return 1;
 }
 
@@ -201,6 +208,7 @@ check_TLB(void *va) {
     /* Part 2: TLB lookup code here */
     num_tlb_checks++;
 
+    pthread_mutex_lock(&tlb_mutex);
     tlb *ptr = tlb_head;
     while(ptr != NULL)
     {
@@ -212,6 +220,7 @@ check_TLB(void *va) {
         ptr = ptr->next;
     }
     num_tlb_misses++;
+    pthread_mutex_unlock(&tlb_mutex);
     return NULL;
 
 }
@@ -452,11 +461,12 @@ void *myalloc(unsigned int num_bytes) {
 
 
     // initialize physical memory using SetPhysicalMem() if this is first user call to myalloc()
-    if(initialized == 0){
-        initialized = 1;
+    if(__atomic_test_and_set(&initialized, 1) == 0){
+        initializing = 1;
         SetPhysicalMem();
-        
+        initializing = 0;
     }
+    while(initializing){};
 
     // calculate number of pages that need to be allocated
     unsigned long numPagesToAllocate = ceil((double)num_bytes / PGSIZE);
