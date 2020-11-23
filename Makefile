@@ -3,7 +3,7 @@ CFLAGS = -g -c -m32 -lm
 AR = ar -rc
 RANLIB = ranlib
 
-all: my_vm.a test
+all: my_vm.a
 
 my_vm.a: my_vm.o
 	$(AR) libmy_vm.a my_vm.o
@@ -13,7 +13,7 @@ my_vm.o: my_vm.h
 
 	$(CC) $(CFLAGS)  my_vm.c -lm
 
-test: 
+test: my_vm.a
 	$(CC) -g -m32 test.c -o test -L. -lmy_vm -lm
 
 benchmark: clean my_vm.a
@@ -24,7 +24,7 @@ runbenchmark: benchmark
 	./benchmark/test
 
 clean:
-	rm -rf *.o *.a test my_vm benchmark/test
+	rm -rf *.o *.out *.a test my_vm benchmark/test
 
 something:
 	$(CC) -g -m32 -o my_vm my_vm.c -lm

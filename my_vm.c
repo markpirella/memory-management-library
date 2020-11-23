@@ -299,7 +299,6 @@ Returns:
     0 - Success
     -1 - Failure, set myerrno appropriately
 */
-//? What's the format of pa? As in, should I be worried about handling offset bits?
 int PageMap(pde_t *pgdir, void *va, void *pa)
 {
     //! Alec
