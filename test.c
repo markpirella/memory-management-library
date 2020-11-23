@@ -1,48 +1,40 @@
 #include <stdio.h>
 #include <string.h>
 #include "my_vm.h"
+#include <sys/time.h>
+#include <sys/types.h>
 
-#define size 2
-
-void printMyMatrix(void *mat)
-{
-    for(int i = 0; i < size; i++)
-    {
-        for(int j = 0; j < size; j++)
-        {
-            int printVal;
-            GetVal(mat + sizeof(int) * (i * size + j), &printVal, sizeof(int));
-            printf("%d\t", printVal);
-        }
-        printf("\n");
-    }
-}
-
+#define size 5000
+#define TEST_ITER 100000
 
 int main()
 {
-    int matsize = size*size;
-    int mat1[] = {1, 2, 3, 4};
-    int mat2[] = {4, 5, 6 ,7};
-    void *answer = myalloc(matsize*sizeof(int));
 
-    void *mymat1 = myalloc(matsize*sizeof(int));
-    void *mymat2 = myalloc(matsize*sizeof(int));
-
-    for(int i = 0; i < matsize; i++)
+    void *mat = myalloc(sizeof(int)*size);
+    for(int i = 0; i < size; i++)
     {
-        PutVal(mymat1 + i*sizeof(int), &mat1[i], sizeof(int));
-        PutVal(mymat2 + i*sizeof(int), &mat2[i], sizeof(int));
+        PutVal(mat, &i, sizeof(int));
     }
-    printMyMatrix(mymat1);    
-    printf("\n");
-    printMyMatrix(mymat2);    
-    printf("\n");
-    MatMult(mymat1, mymat2, size, answer);
-    printMyMatrix(answer);
 
+    struct timeval before;
+    struct timeval after;
+    double totalTime = 0;
 
-    
+    gettimeofday(&before, NULL);
+    srand(before.tv_usec);
+    for(int i = 0; i < TEST_ITER; i++)
+    {
+        gettimeofday(&before, NULL);
+        int store;
+        int index = rand() % size;
+        GetVal(mat + index*sizeof(int), &store, sizeof(int));
+        gettimeofday(&after, NULL);
+
+        double timeOneIter = (after.tv_sec*1e6 + after.tv_usec) - (before.tv_sec*1e6 + before.tv_usec);
+        totalTime += timeOneIter;
+    }
+
+    printf("TLB_SIZE: %d\tNumber of Accesses: %d\tAverage access time: %f usec\n", TLB_SIZE, TEST_ITER, (totalTime)/TEST_ITER);
 
     return 0;
 }
