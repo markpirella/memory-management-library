@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <pthread.h>
 
 //Assume the address space is 32 bits, so the max memory size is 4GB
 
@@ -30,7 +31,7 @@ typedef unsigned long pte_t;
 typedef pte_t *pde_t;
 
 
-#define TLB_SIZE 120
+#define TLB_SIZE 90
 
 typedef struct tlb_entry {
     void *va; // virtual address

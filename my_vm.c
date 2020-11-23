@@ -5,12 +5,14 @@ int myerrno = 0;
 int *physBitmap;
 int *virtBitmap;
 
+pthread_mutex_t lock;
+
 pde_t *pageDir = NULL; // pointer to page directory (array of page directory entries)
 
 void *physMem = NULL; // void pointer to point to the start of allocated physical memory
 
-size_t numVirtPages = 0; // stores total number of virtual pages
-size_t numPhysPages = 0; // stores total number of physical pages
+unsigned long long numVirtPages = 0; // stores total number of virtual pages
+unsigned long long numPhysPages = 0; // stores total number of physical pages
 
 int numOffsetBits = 0; // stores the number of bits used to calculate the offset in virtual addresses (ex. bits 11:0 for(PGSIZE)= 4096)
 int numOuterIndexBits = 0; // stores the number of bits used to calculate the outer index (index of page dir) in virtual addresses (ex. bits 21:12 for(PGSIZE)= 4096)
@@ -19,8 +21,8 @@ int numPageDirEntries = 0; // stores the number of page dir entries for easy tra
 
 int initialized = 0; // stores value representing whether or not physical memory has been initialized yet
 
-unsigned int num_tlb_checks = 0; // stores the number of times the TLB is checked for an address mapping
-unsigned int num_tlb_misses = 0; // stores the number of times the TLB checks encounter a miss
+unsigned long long num_tlb_checks = 0; // stores the number of times the TLB is checked for an address mapping
+unsigned long long num_tlb_misses = 0; // stores the number of times the TLB checks encounter a miss
 
 tlb *tlb_head = NULL;
 tlb *tlb_tail = NULL;
@@ -51,10 +53,13 @@ void SetPhysicalMem() {
     // allocate physical memory and set the void pointer physMem to the start of the physical memory
     physMem = malloc(MEMSIZE);
     if(DEBUG) printf("PHYSICAL MEMORY STARTS AT ADDRESS: %lx\n", (long unsigned int)physMem);
+
+    pthread_mutex_init(&lock, NULL);
+
     // store appropriate number of virtual pages
     numVirtPages =(MAX_MEMSIZE) / (PGSIZE);
 
-    if(DEBUG) printf("numvirtpages: %d\n", numVirtPages);
+    if(DEBUG) printf("numvirtpages: %llu\n", numVirtPages);
 
     // store appropriate number of physical pages
     numPhysPages = (MEMSIZE) / (PGSIZE);
@@ -72,17 +77,17 @@ void SetPhysicalMem() {
     numPageDirEntries = pow(2, numOuterIndexBits);
 
     // determine number of elements needed in virtual bitmap (bit array)
-    int bitmapLength = numVirtPages / sizeof(int);
+    unsigned long long bitmapLength = numVirtPages / sizeof(int);
     if(numVirtPages % ADDRESS_BIT_LENGTH != 0){
         bitmapLength++;
     }
 
-    if(DEBUG) printf("virtual bitmap length: %d\n", bitmapLength);
+    if(DEBUG) printf("virtual bitmap length: %llu\n", bitmapLength);
 
     // allocate and initialize virtual bitmap
     //int temp[bitmapLength];
     virtBitmap = malloc(sizeof(int)*bitmapLength);
-    int i;
+    unsigned long long i;
     for(i = 0; i < bitmapLength; i++){
         virtBitmap[i] = 0;
     }
@@ -94,7 +99,7 @@ void SetPhysicalMem() {
         bitmapLength++;
     }
 
-    if(DEBUG) printf("physical bitmap length: %d\n", bitmapLength);
+    if(DEBUG) printf("physical bitmap length: %llu\n", bitmapLength);
 
     // allocate and initialize physical bitmap
     //int temp2[bitmapLength];
@@ -222,11 +227,11 @@ print_TLB_missrate()
     //! Mark
     double miss_rate = 0;
 
-    printf("misses: %d, checks: %d\n", num_tlb_misses, num_tlb_checks);
+    printf("TLB misses: %llu, total TLB checks: %llu\n", num_tlb_misses, num_tlb_checks);
 
     /*Part 2 Code here to calculate and print the TLB miss rate*/
 
-    miss_rate = (double)num_tlb_misses / (double)num_tlb_checks;
+    miss_rate = (long double)num_tlb_misses / (long double)num_tlb_checks;
 
 
     fprintf(stderr, "TLB miss rate %lf \n", miss_rate);
@@ -306,6 +311,7 @@ int PageMap(pde_t *pgdir, void *va, void *pa)
     // truncate the page table bits and set the remaining bits as pageDirIndex
     pageDirIndex = virtAddress >> numInnerIndexBits;
 
+    //pthread_mutex_lock(&lock);
     if(pgdir[pageDirIndex] == NULL)
     {
         // allocates memory for a page table array of size 2^numInnerIndexBits
@@ -314,6 +320,7 @@ int PageMap(pde_t *pgdir, void *va, void *pa)
         pgdir[pageDirIndex] = malloc(sizeOfPageTable);
         memset(pgdir[pageDirIndex], 0, sizeOfPageTable);
     }
+    
 
     // Checks if the virtual address has already been mapped/not cleared
     if(pgdir[pageDirIndex][pageTableIndex] != 0)
@@ -326,8 +333,10 @@ int PageMap(pde_t *pgdir, void *va, void *pa)
     pgdir[pageDirIndex][pageTableIndex] = (unsigned long)pa;
 
     // Change bitmap values
+    pthread_mutex_lock(&lock);
     SetBit(virtBitmap, (pageDirIndex << numInnerIndexBits) + pageTableIndex);
     SetBit(physBitmap, ((unsigned long)(pa - physMem) >> numOffsetBits));
+    pthread_mutex_unlock(&lock);
 
     return 0;
 }
@@ -354,10 +363,11 @@ void *get_next_avail_virt(int num_pages_to_find) {
 
     //Use virtual address bitmap to find the next free *virtual* pages
 
-    int i;
+    unsigned long long i;
     for(i = 0; i < numVirtPages; i++){
+        pthread_mutex_lock(&lock);
         if(TestBit(virtBitmap, i) == 0){ // found a 0
-            if(DEBUG) printf("found a 0 at %d\n", i);
+            if(DEBUG) printf("found a 0 at %llu\n", i);
             // now make sure there are enough contiguous 0's
             int j;
             int foundEnoughZeroes = 1;
@@ -384,6 +394,7 @@ void *get_next_avail_virt(int num_pages_to_find) {
             }
 
         }
+        pthread_mutex_unlock(&lock);
     }
     return NULL;
 }
@@ -403,20 +414,24 @@ unsigned long *get_next_avail_phys(int num_pages_to_find) {
 
     int numPagesFound = 0;
     int i;
+    pthread_mutex_lock(&lock);
     for(i = 0; i < numPhysPages && numPagesFound < num_pages_to_find; i++){
         if(TestBit(physBitmap, i) == 0){
             physPages[numPagesFound] = ((unsigned long)i) * (PGSIZE);
             numPagesFound++;
         }
     }
+    pthread_mutex_unlock(&lock);
     if(numPagesFound != num_pages_to_find){ // not enough physical pages left -> return NULL
         return NULL;
     }
     // set the bits to 1
     int j;
+    pthread_mutex_lock(&lock);
     for(j = 0; j < num_pages_to_find; j++){
         SetBit(physBitmap, physPages[j]/(PGSIZE));
     }
+    pthread_mutex_unlock(&lock);
     return physPages;
 }
 
@@ -438,11 +453,10 @@ void *myalloc(unsigned int num_bytes) {
 
     // initialize physical memory using SetPhysicalMem() if this is first user call to myalloc()
     if(initialized == 0){
-        if(DEBUG) puts("INITIALIZING");
-        SetPhysicalMem();
         initialized = 1;
+        SetPhysicalMem();
+        
     }
-    if(DEBUG) puts("CALLED MYALLOC");
 
     // calculate number of pages that need to be allocated
     unsigned long numPagesToAllocate = ceil((double)num_bytes / PGSIZE);
@@ -565,8 +579,10 @@ void myfree(void *va, int size) {
         physBitmapIndex = (physAddr - (unsigned long)physMem) >> numOffsetBits;
 
         // Frees the memory
+        pthread_mutex_lock(&lock);
         ClearBit(virtBitmap, virtBitmapIndex);
         ClearBit(physBitmap, physBitmapIndex);
+        pthread_mutex_unlock(&lock);
         pageDir[pageDirIndexArray[i]][pageTableIndexArray[i]] = 0;
     }
     free(pageDirIndexArray);
