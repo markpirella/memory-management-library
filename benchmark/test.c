@@ -33,9 +33,7 @@ int main() {
             address_b = (unsigned int)b + ((i * SIZE * sizeof(int))) + (j * sizeof(int));
             PutVal((void *)address_a, &x, sizeof(int));
             PutVal((void *)address_b, &x, sizeof(int));
-            x++;
         }
-        x-=4;
     }
 
     printf("Fetching matrix elements stored in the arrays\n");
