@@ -311,7 +311,7 @@ int PageMap(pde_t *pgdir, void *va, void *pa)
     // truncate the page table bits and set the remaining bits as pageDirIndex
     pageDirIndex = virtAddress >> numInnerIndexBits;
 
-    //pthread_mutex_lock(&lock);
+    pthread_mutex_lock(&lock);
     if(pgdir[pageDirIndex] == NULL)
     {
         // allocates memory for a page table array of size 2^numInnerIndexBits
@@ -333,7 +333,7 @@ int PageMap(pde_t *pgdir, void *va, void *pa)
     pgdir[pageDirIndex][pageTableIndex] = (unsigned long)pa;
 
     // Change bitmap values
-    pthread_mutex_lock(&lock);
+    //pthread_mutex_lock(&lock);
     SetBit(virtBitmap, (pageDirIndex << numInnerIndexBits) + pageTableIndex);
     SetBit(physBitmap, ((unsigned long)(pa - physMem) >> numOffsetBits));
     pthread_mutex_unlock(&lock);
@@ -582,8 +582,8 @@ void myfree(void *va, int size) {
         pthread_mutex_lock(&lock);
         ClearBit(virtBitmap, virtBitmapIndex);
         ClearBit(physBitmap, physBitmapIndex);
-        pthread_mutex_unlock(&lock);
         pageDir[pageDirIndexArray[i]][pageTableIndexArray[i]] = 0;
+        pthread_mutex_unlock(&lock);
     }
     free(pageDirIndexArray);
     free(pageTableIndexArray);
