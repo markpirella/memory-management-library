@@ -65,16 +65,6 @@ void GetVal(void *va, void *val, int size);
 void MatMult(void *mat1, void *mat2, int size, void *answer);
 void print_TLB_missrate();
 
-/*
-Our functions
-*/
-/*
-char *exceptions[] = {
-    "SUCCESS",
-    "VIRTUAL ADDRESS IS ALREADY MAPPED"
-    };
-*/
-
 void SetBitRange(int A[], int a, int b);
 
 void SetBit(int A[], int k); // set the bit at the k-th position in A[i]
