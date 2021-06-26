@@ -1,2 +1,2 @@
-# CS416-Asst3
-Memory Management Library
+# Memory Management Library
+In this project, my partner and I developed a C library which uses a multi-level page table and a translation lookaside buffer (TLB) to allow a user to simulate memory allocation and management. The most important function in our library is the myalloc() function, which makes use of the other functions in our library in order to behave similarly to the well-known malloc() function. Our library allows for customizable memory, TLB, and page sizes and is also thread-safe. A full description of each function and our test results can be found in the file "WriteUp.pdf".
