@@ -29,20 +29,7 @@ unsigned long long num_tlb_misses = 0; // stores the number of times the TLB che
 tlb *tlb_head = NULL;
 tlb *tlb_tail = NULL;
 int tlb_count = 0;
-/*
-int main()
-{
-    void *va, *pa;
-    numOffsetBits = numOuterIndexBits = numInnerIndexBits = 4;
 
-    va = (void*)0x440;
-    pa = (void*)0x440;
-    pageDir = malloc(sizeof(pde_t)*(int)pow(2, numOuterIndexBits));
-    
-    PageMap(pageDir, va, pa);
-    if(DEBUG) printf("HELLO WORLD!\n");
-}
-*/
 /*
 Function responsible for allocating and setting your physical memory
 */
@@ -130,11 +117,9 @@ void SetPhysicalMem() {
  * Part 2: Add a virtual to physical page translation to the TLB.
  * Feel free to extend the function arguments or return type.
  */
-int
-add_TLB(void *va, void *pa)
+int add_TLB(void *va, void *pa)
 {
     //! Alec
-    /*Part 2 HINT: Add a virtual to physical page translation to the TLB */
 
     pthread_mutex_lock(&tlb_mutex);
     // Initialize new tlb entry with va and pa
@@ -255,10 +240,6 @@ pte_t * Translate(pde_t *pgdir, void *va) {
 
     //! Mark
 
-    //HINT: Get the Page directory index (1st level) Then get the
-    //2nd-level-page table index using the virtual address.  Using the page
-    //directory index and page table index get the physical address
-
     //* first check TLB for virtual -> physical mapping. if not found, then continue on and find in page table
     if(DEBUG) puts("about to check tlb");
     pte_t *tlb_check = check_TLB((void*)((unsigned long)va & ~((1 << numOffsetBits) - 1)));
@@ -278,7 +259,6 @@ pte_t * Translate(pde_t *pgdir, void *va) {
     for(i = numOffsetBits; i < ADDRESS_BIT_LENGTH - numOuterIndexBits; i++){
         pTableMask |= (0x1 << i);
     }
-    ////if(DEBUG) printf("pTableMask: %x\n", pTableMask);
     
     // grab outer index bits in address using pDirMask and store as page_directory_index
     unsigned long pdir_index = ((unsigned long)va & pDirMask) >> (numOffsetBits + numInnerIndexBits);
@@ -302,9 +282,6 @@ Returns:
 int PageMap(pde_t *pgdir, void *va, void *pa)
 {
     //! Alec
-    /*HINT: Similar to Translate(), find the page directory (1st level)
-    and page table (2nd-level) indices. If no mapping exists, set the
-    virtual to physical mapping */
 
     // init all variables
     unsigned long virtAddress, pageTableMask, pageTableIndex, pageDirIndex;
@@ -348,18 +325,6 @@ int PageMap(pde_t *pgdir, void *va, void *pa)
 
     return 0;
 }
-
-
-/*Function that gets the next available page
-*/
-/*
-void *get_next_avail(int num_pages) {
-
-    //Use virtual address bitmap to find the next free page
-}
-
-**** FUNCTION ABOVE SPLIT INTO THE TWO FUNCTIONS BELOW, AS SUGGESTED ****
-*/
 
 
 /*
@@ -450,14 +415,6 @@ and used by the benchmark
 void *myalloc(unsigned int num_bytes) {
 
     //! Mark
-
-    //HINT: If the physical memory is not yet initialized, then allocate and initialize.
-
-    /* HINT: If the page directory is not initialized, then initialize the
-    page directory. Next, using get_next_avail(), check if there are free pages. If
-    free pages are available, set the bitmaps and map a new page. Note, you will
-    have to mark which physical pages are used. */
-
 
     // initialize physical memory using SetPhysicalMem() if this is first user call to myalloc()
     if(__atomic_test_and_set(&initialized, 1) == 0){
@@ -605,10 +562,6 @@ void myfree(void *va, int size) {
 */
 void PutVal(void *va, void *val, int size) {
     //! Alec
-    /* HINT: Using the virtual address and Translate(), find the physical page. Copy
-       the contents of "val" to a physical page. NOTE: The "size" value can be larger
-       than one page. Therefore, you may have to find multiple pages using Translate()
-       function.*/
 
     int remainingBits = size;
     char *data = (char*)val;
@@ -646,10 +599,7 @@ void PutVal(void *va, void *val, int size) {
 void GetVal(void *va, void *val, int size) {
 
     //! Alec
-    /* HINT: put the values pointed to by "va" inside the physical memory at given
-    "val" address. Assume you can access "val" directly by derefencing them.
-    If you are implementing TLB,  always check first the presence of translation
-    in TLB before proceeding forward */
+    
     char *data = (char*)val;
     int remainingBits = size;
     for(int i = 0; remainingBits > 0; i++)
@@ -685,11 +635,6 @@ multiplication, copy the result to answer.
 */
 void MatMult(void *mat1, void *mat2, int size, void *answer) {
     //! Alec
-    /* Hint: You will index as [i * size + j] where  "i, j" are the indices of the
-    matrix accessed. Similar to the code in test.c, you will use GetVal() to
-    load each element and perform multiplication. Take a look at test.c! In addition to
-    getting the values from two matrices, you will perform multiplication and
-    store the result to the "answer array"*/
 
     int i, j, k;
     for(i = 0; i < size; i++)
